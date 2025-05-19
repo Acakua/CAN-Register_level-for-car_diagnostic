@@ -4,8 +4,8 @@
 -I../SDK/platform/drivers/inc
 -I../SDK/platform/pal/inc
 -I../SDK/rtos/osif
--I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/src"
--I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/board"
+-I"C:/Users/Admin/workspaceS32DS.3.5/CAN_Protocol_Project/can_pal_s32k144/src"
+-I"C:/Users/Admin/workspaceS32DS.3.5/CAN_Protocol_Project/can_pal_s32k144/board"
 -I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/include"
 -I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/startup"
 -I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144"
