@@ -2,7 +2,6 @@
 #include <interrupt_manager.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <Send_Can.h>
 
 #define EVB
 
@@ -73,22 +72,14 @@ int main(void)
 
     while(1)
     {
-//        can_message_t message = {
-//            .cs = 0U,
-//            .id = TX_MSG_ID,
-//            .data[0] = ledRequested,
-//            .length = 1U
-//        };
+        can_message_t message = {
+            .cs = 0U,
+            .id = TX_MSG_ID,
+            .data[0] = ledRequested,
+            .length = 1U
+        };
 
-        while (1) {
-            uint8_t data[8] = { /*du lieu can gui*/ };
-            if (Send_Can(0x123, data, 8)) {
-
-            } else {
-
-            }
-        }
-
+        CAN_Send(&can_pal1_instance, TX_MAILBOX, &message);
         PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));
         ledRequested ^= 1U;
 
