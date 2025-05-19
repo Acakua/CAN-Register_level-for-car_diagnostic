@@ -40,15 +40,12 @@
 									<listOptionValue builtIn="false" value="../SDK/rtos/osif"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/board}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144/startup&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/drivers/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/drivers/src/clock/S32K1xx&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/pal/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/rtos/osif&quot;"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144/include"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144/startup"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/common"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/drivers/src/clock/S32K1xx"/>
 								</option>
 								<option id="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.c.compiler.option.target.sysroot.1913931667" name="Sysroot" superClass="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.c.compiler.option.target.sysroot" useByScannerDiscovery="false" value="--sysroot=&quot;${S32DS_ARM32_NEWLIB_DIR}&quot;" valueType="string"/>
 								<option id="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.c.compiler.option.target.mcpu.1930726779" name="Arm family" superClass="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.c.compiler.option.target.mcpu" useByScannerDiscovery="true" value="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.c.compiler.option.target.mcpu.cortex-m4" valueType="enumerated"/>
@@ -126,15 +123,12 @@
 									<listOptionValue builtIn="false" value="../SDK/rtos/osif"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/board}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144/startup&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/S32K144&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices/common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/devices&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/drivers/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/drivers/src/clock/S32K1xx&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/platform/pal/inc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${S32_SDK_PATH}/rtos/osif&quot;"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144/include"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144/startup"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/S32K144"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices/common"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/devices"/>
+									<listOptionValue builtIn="false" value="../SDK/platform/drivers/src/clock/S32K1xx"/>
 								</option>
 								<option id="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.assembler.option.target.sysroot.1851944229" name="Sysroot" superClass="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.assembler.option.target.sysroot" value="--sysroot=&quot;${S32DS_ARM32_NEWLIB_DIR}&quot;" valueType="string"/>
 								<option id="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.assembler.option.target.mcpu.1027872250" name="Arm family" superClass="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.assembler.option.target.mcpu" value="com.nxp.s32ds.cle.arm.mbs.arm32.bare.tool.assembler.option.target.mcpu.cortex-m4" valueType="enumerated"/>

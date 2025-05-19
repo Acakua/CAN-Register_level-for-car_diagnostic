@@ -4,15 +4,12 @@
 -I../SDK/rtos/osif
 -I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/src"
 -I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/board"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/include"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/startup"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/common"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/inc"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/clock/S32K1xx"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/pal/inc"
--I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/rtos/osif"
+-I../SDK/platform/devices/S32K144/include
+-I../SDK/platform/devices/S32K144/startup
+-I../SDK/platform/devices/S32K144
+-I../SDK/platform/devices/common
+-I../SDK/platform/devices
+-I../SDK/platform/drivers/src/clock/S32K1xx
 -x assembler-with-cpp
 -DSTART_FROM_FLASH
 -g3
