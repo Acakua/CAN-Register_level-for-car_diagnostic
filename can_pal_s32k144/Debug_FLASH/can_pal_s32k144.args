@@ -29,5 +29,6 @@
 "./board/peripherals_can_pal1.o"
 "./board/peripherals_osif1.o"
 "./board/pin_mux.o"
+"./src/Send_Can.o"
 "./src/main.o"
 "./src/test.o"
