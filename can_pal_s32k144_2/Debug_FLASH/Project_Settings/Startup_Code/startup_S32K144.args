@@ -1,7 +1,7 @@
 -c
+-I../SDK/platform/pal/inc
 -I../SDK/platform/drivers/inc
 -I../SDK/rtos/osif
--I../SDK/platform/pal/inc
 -I"E:/SM32/can_pal_s32k144_2/src"
 -I"E:/SM32/can_pal_s32k144_2/board"
 -I"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/include"

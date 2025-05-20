@@ -49,31 +49,40 @@ uint8_t ledRequested = LED0_CHANGE_REQUESTED;
 
 void ADCInit(void)
 {
-	ADC_Init(&adc_pal_1_instance, &adc_pal_1_config);
 
+    PCC->PCCn[PCC_PORTC_INDEX] |= PCC_PCCn_CGC_MASK;
+
+
+    PCC->PCCn[PCC_ADC0_INDEX] = PCC_PCCn_PCS(1) | PCC_PCCn_CGC_MASK;
+
+
+    PORTC->PCR[14] = (PORTC->PCR[14] & ~PORT_PCR_MUX_MASK) | PORT_PCR_MUX(0);
+
+
+    ADC0->SC3 = ADC_SC3_CAL_MASK;
+        while (ADC0->SC3 & ADC_SC3_CAL_MASK) { }
+
+    ADC0->SC1[0] = ADC_SC1_ADCH(31);
+
+
+    ADC0->CFG1 =
+        (0 << 0) |  // ADICLK = 0
+        (1 << 2) |  // MODE = 12-bit
+        (0 << 4) |  // ADLSMP = short
+        (0 << 5);   // ADIV = 1
+
+    ADC0->SC2 = 0;
 }
+
 
 
 uint16_t ReadADCValue(void)
 {
-    status_t status;
-    uint16_t adcResult = 0;
-
-
-    ADC_StartConversion(&adc_pal_1_instance);
-
-
-    while (ADC_GetStatusFlags(&adc_pal_1_instance) != ADC_STATUS_CONV_COMPLETE) {}
-
-
-    status = ADC_GetConvValueRAW(&adc_pal_1_instance, 0U, &adcResult);
-    if (status == STATUS_SUCCESS)
-    {
-        return adcResult;
-    }
-    return 0;
+    ADC0->SC1[0] = ADC_SC1_ADCH(12);
+    while ((ADC0->SC1[0] & ADC_SC1_COCO_MASK) == 0);
+    //return 0x1234;
+    return (uint16_t)(ADC0->R[0]);
 }
-
 
 
 void BoardInit(void)
@@ -85,8 +94,8 @@ void BoardInit(void)
 
 void GPIOInit(void)
 {
-    PINS_DRV_SetPinsDirection(GPIO_PORT, (1 << LED1) | (1 << LED0));
-    PINS_DRV_ClearPins(GPIO_PORT, (1 << LED1) | (1 << LED0));
+    // PINS_DRV_SetPinsDirection(GPIO_PORT, (1 << LED1) | (1 << LED0));
+    // PINS_DRV_ClearPins(GPIO_PORT, (1 << LED1) | (1 << LED0));
 }
 
 volatile int exit_code = 0;
@@ -98,8 +107,8 @@ int main(void)
     CAN_Init(&can_pal1_instance, &can_pal1_Config0);
 
     can_buff_config_t txBuffCfg = {
-        .enableFD = true,
-        .enableBRS = true,
+        .enableFD = false,
+        .enableBRS = false,
         .fdPadding = 0U,
         .idType = CAN_MSG_ID_STD,
         .isRemote = false
@@ -109,17 +118,8 @@ int main(void)
 
     while(1)
     {
-
         uint16_t adcVal = ReadADCValue();
-
-
-        float voltage = (adcVal * 3.3f) / 4095.0f;
-
-
-        float temperatureC = voltage * 100.0f;
-
-        uint16_t tempToSend = (uint16_t)(temperatureC * 10);
-
+        uint16_t tempToSend = (uint16_t)(adcVal);
 
         can_message_t message = {
             .cs = 0U,
@@ -127,15 +127,12 @@ int main(void)
             .length = 2U
         };
 
-
         message.data[0] = (uint8_t)(tempToSend & 0xFF);
         message.data[1] = (uint8_t)((tempToSend >> 8) & 0xFF);
 
         CAN_Send(&can_pal1_instance, TX_MAILBOX, &message);
 
-
-        PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));
-
+        // PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));
 
         for (volatile uint32_t delay = 0; delay < 1000000; delay++);
     }

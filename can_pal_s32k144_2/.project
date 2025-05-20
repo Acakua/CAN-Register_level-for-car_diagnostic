@@ -336,7 +336,7 @@
 	<variableList>
 		<variable>
 			<name>S32_SDK_PATH</name>
-			<value>file:/${eclipse_home}../S32DS/software/S32SDK_S32K1XX_RTM_4.0.1</value>
+			<value>file:/C:/eclipse_home../S32DS/software/S32SDK_S32K1XX_RTM_4.0.1</value>
 		</variable>
 	</variableList>
 </projectDescription>
