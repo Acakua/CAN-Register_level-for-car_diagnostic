@@ -1,7 +1,7 @@
 SDK/platform/drivers/src/edma/edma_driver.o: \
- C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/edma/edma_driver.c \
- C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/edma/edma_irq.h \
- C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/edma/edma_hw_access.h \
+ ../SDK/platform/drivers/src/edma/edma_driver.c \
+ ../SDK/platform/drivers/src/edma/edma_irq.h \
+ ../SDK/platform/drivers/src/edma/edma_hw_access.h \
  ../SDK/platform/drivers/inc/edma_driver.h \
  ../SDK/platform/devices/device_registers.h \
  ../SDK/platform/devices/common/s32_core_cm4.h \
@@ -13,9 +13,9 @@ SDK/platform/drivers/src/edma/edma_driver.o: \
  ../SDK/platform/drivers/inc/../src/clock/S32K1xx/clock_S32K1xx.h \
  ../SDK/platform/drivers/inc/interrupt_manager.h
 
-C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/edma/edma_irq.h:
+../SDK/platform/drivers/src/edma/edma_irq.h:
 
-C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/edma/edma_hw_access.h:
+../SDK/platform/drivers/src/edma/edma_hw_access.h:
 
 ../SDK/platform/drivers/inc/edma_driver.h:
 

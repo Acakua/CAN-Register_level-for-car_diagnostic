@@ -4,8 +4,8 @@
 -I../SDK/platform/drivers/inc
 -I../SDK/platform/pal/inc
 -I../SDK/rtos/osif
--I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/src"
--I"E:/SM32/CAN_Protocol_Project/can_pal_s32k144/board"
+-I"C:/Users/lenovo/Desktop/BackUpSrcFlexCAN/CAN_Protocol_Project-main/CAN_Protocol_Project-main/can_pal_s32k144/src"
+-I"C:/Users/lenovo/Desktop/BackUpSrcFlexCAN/CAN_Protocol_Project-main/CAN_Protocol_Project-main/can_pal_s32k144/board"
 -I../SDK/platform/devices/S32K144/include
 -I../SDK/platform/devices/S32K144/startup
 -I../SDK/platform/devices/S32K144

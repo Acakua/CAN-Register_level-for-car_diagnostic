@@ -1,5 +1,3 @@
--T
-"C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/linker/gcc/S32K144_64_flash.ld"
 -Wl,-Map,"can_pal_s32k144.map"
 -Xlinker
 --gc-sections
@@ -10,7 +8,6 @@
 -specs=nano.specs
 -specs=nosys.specs
 --sysroot="C:/NXP/S32DS.3.5/S32DS/build_tools/gcc_b1620/gcc-6.3-arm32-eabi/arm-none-eabi/newlib"
-"./Project_Settings/Startup_Code/startup_S32K144.o"
 "./SDK/platform/devices/S32K144/startup/system_S32K144.o"
 "./SDK/platform/devices/startup.o"
 "./SDK/platform/drivers/src/clock/S32K1xx/clock_S32K1xx.o"
@@ -29,5 +26,6 @@
 "./board/peripherals_can_pal1.o"
 "./board/peripherals_osif1.o"
 "./board/pin_mux.o"
+"./src/Send_Can.o"
 "./src/main.o"
 "./src/test.o"

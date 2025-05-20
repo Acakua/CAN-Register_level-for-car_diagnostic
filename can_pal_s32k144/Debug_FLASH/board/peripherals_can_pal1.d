@@ -1,6 +1,6 @@
 board/peripherals_can_pal1.o: ../board/peripherals_can_pal1.c \
  ../board/peripherals_can_pal1.h ../SDK/platform/pal/inc/can_pal.h \
- E:/SM32/CAN_Protocol_Project/can_pal_s32k144/board/can_pal_cfg.h \
+ C:/Users/lenovo/Desktop/BackUpSrcFlexCAN/CAN_Protocol_Project-main/CAN_Protocol_Project-main/can_pal_s32k144/board/can_pal_cfg.h \
  ../SDK/platform/pal/inc/can_pal_mapping.h \
  ../SDK/platform/devices/device_registers.h \
  ../SDK/platform/devices/common/s32_core_cm4.h \
@@ -16,7 +16,7 @@ board/peripherals_can_pal1.o: ../board/peripherals_can_pal1.c \
 
 ../SDK/platform/pal/inc/can_pal.h:
 
-E:/SM32/CAN_Protocol_Project/can_pal_s32k144/board/can_pal_cfg.h:
+C:/Users/lenovo/Desktop/BackUpSrcFlexCAN/CAN_Protocol_Project-main/CAN_Protocol_Project-main/can_pal_s32k144/board/can_pal_cfg.h:
 
 ../SDK/platform/pal/inc/can_pal_mapping.h:
 

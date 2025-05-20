@@ -19,8 +19,6 @@ RM := rm -rf
 -include SDK/platform/drivers/src/clock/S32K1xx/subdir.mk
 -include SDK/platform/devices/S32K144/startup/subdir.mk
 -include SDK/platform/devices/subdir.mk
--include Project_Settings/Startup_Code/subdir.mk
--include Project_Settings/Linker_Files/subdir.mk
 -include subdir.mk
 -include objects.mk
 
@@ -41,7 +39,7 @@ can_pal_s32k144.siz \
 all: can_pal_s32k144.elf secondary-outputs
 
 # Tool invocations
-can_pal_s32k144.elf: $(OBJS) C:\NXP\S32DS.3.5\S32DS\software\S32SDK_S32K1XX_RTM_4.0.1\platform\devices\S32K144\linker\gcc\S32K144_64_flash.ld $(USER_OBJS)
+can_pal_s32k144.elf: $(OBJS)  $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Standard S32DS C Linker'
 	arm-none-eabi-gcc -o "can_pal_s32k144.elf" "@can_pal_s32k144.args"  $(USER_OBJS) $(LIBS)
