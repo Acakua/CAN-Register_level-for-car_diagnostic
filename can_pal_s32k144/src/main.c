@@ -2,8 +2,7 @@
 #include <interrupt_manager.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <Send_Can.h>
-
+#include <FlexCan.h>
 #define EVB
 
 #ifdef EVB
@@ -55,45 +54,29 @@ void GPIOInit(void)
 
 volatile int exit_code = 0;
 
-int main(void)
-{
+int main(void) {
     BoardInit();
     GPIOInit();
-    CAN_Init(&can_pal1_instance, &can_pal1_Config0);
 
-    can_buff_config_t txBuffCfg = {
-        .enableFD = true,
-        .enableBRS = true,
-        .fdPadding = 0U,
-        .idType = CAN_MSG_ID_STD,
-        .isRemote = false
-    };
+    FLEXCAN0_init();  // Khoi tao FlexCAN0
 
-    CAN_ConfigTxBuff(&can_pal1_instance, TX_MAILBOX, &txBuffCfg);
+    uint8_t buffer[4] = {0};
+    uint8_t ledRequested = 0;  // Trang thai led gui: 0 hoac 1
 
-    while(1)
-    {
-//        can_message_t message = {
-//            .cs = 0U,
-//            .id = TX_MSG_ID,
-//            .data[0] = ledRequested,
-//            .length = 1U
-//        };
-
-        while (1) {
-            uint8_t data[8] = { /*du lieu can gui*/ };
-            if (Send_Can(0x123, data, 8)) {
-
-            } else {
-
-            }
+    while (1) {
+        // Chuẩn bi du lieu gui
+        for (int i = 0; i < 4; i++) {
+            buffer[i] = ledRequested;  // Gan 4 byte giong nhau, co the sua theo y muon
         }
 
-        PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));
-        ledRequested ^= 1U;
+        FLEXCAN0_transmit_msg(buffer);  // Gui du lieu CAN
 
-        for (volatile uint32_t delay = 0; delay < 1000000; delay++);
+        PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));  // Dao trang thai LED0
+
+        ledRequested ^= 1;  // Doi trang thai 0 -> 1 hoac 1 -> 0
+
+        for (volatile uint32_t delay = 0; delay < 1000000; delay++);  // Delay don gian
     }
 
-    return exit_code;
+    return 0;
 }
