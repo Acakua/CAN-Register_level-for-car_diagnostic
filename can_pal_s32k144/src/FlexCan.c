@@ -69,4 +69,34 @@ void FLEXCAN0_transmit_msg(uint8_t buffer[]) {
     dataWord |= ((uint32_t)buffer[3] << 24);
 
     CAN0->RAMn[2] = dataWord;  // Ghi du lieu vao word 2 cua MB0 (doan du lieu)
+
+
+}
+uint32_t FLEXCAN0_receive_msg(uint8_t *buffer_rx) {
+//    if (buffer_rx == NULL) {
+//        return 0;  // Kiểm tra con trỏ đầu vào
+//    }
+
+    /* Đọc thông tin từ MB4 */
+    uint32_t RxCODE = (CAN0->RAMn[4 * 4 + 0] & 0x07000000) >> 24;  /* CODE field */
+    if (RxCODE != 0x2) { // MB trong
+        return 0;  // Kiểm tra mã trạng thái
+    }
+    // RxID = (CAN0->RAMn[4 * 4 + 1] & CAN_WMBn_ID_ID_MASK) >> CAN_WMBn_ID_ID_SHIFT; do ham ngat da ktra ID roi
+    uint32_t RxLENGTH = (CAN0->RAMn[4 * 4 + 0] & CAN_WMBn_CS_DLC_MASK) >> CAN_WMBn_CS_DLC_SHIFT;
+    uint32_t RxDATA = CAN0->RAMn[4 * 4 + 2];  /* Đọc 4 byte dữ liệu từ word 2 */
+    for (uint32_t i = 0; i < RxLENGTH && i < 4; i++) {
+            buffer_rx[i] = (RxDATA >> (i * 8)) & 0xFF; // Lưu trực tiếp vào buffer
+        }
+    for (uint32_t i = RxLENGTH; i < 4; i++) {
+        buffer_rx[i] = 0; // Xóa byte không hợp lệ
+    }
+
+    /* Đọc TIMESTAMP từ MB4 (sửa lỗi từ MB0) */
+    uint32_t RxTIMESTAMP = (CAN0->RAMn[4 * 4 + 0] & 0x0000FFFF);
+
+    /* Mở khóa MB và xóa cờ ngắt */
+    (void)CAN0->TIMER;           /* Mở khóa MB */
+    CAN0->IFLAG1 = 0x00000010;     /* Xóa cờ MB4 */
+    return RxLENGTH;
 }
