@@ -3,8 +3,8 @@
  * will be overwritten if the respective S32 Config Tools is used to update this file.
  **********************************************************************************************************************/
 
-#ifndef can_pal1_H
-#define can_pal1_H
+#ifndef adc_config_1_H
+#define adc_config_1_H
 
 /**
  * @page misra_violations MISRA-C:2012 violations
@@ -17,18 +17,24 @@
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "can_pal.h"
+#include "adc_driver.h"
+
+/*******************************************************************************
+ * Definitions 
+ ******************************************************************************/
+
+/*Device instance number */
+#define INST_ADC_CONFIG_1  (0U)
 
 /*******************************************************************************
  * Global variables 
  ******************************************************************************/
 
-/* User configuration */
+/* User configurations */
 
-extern const can_user_config_t can_pal1_Config0;
-
-extern can_instance_t can_pal1_instance;
-
+/* Converter configuration 0 */
+extern const adc_converter_config_t adc_config_1_ConvConfig0;
 
 
-#endif /* can_pal1_H */
+
+#endif /* adc_config_1_H */

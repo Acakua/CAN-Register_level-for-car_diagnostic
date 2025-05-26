@@ -40,7 +40,7 @@ extern "C" {
 #define btn1_PORT    PTC
 #define btn1_PIN     13U
 /*! @brief User number of configured pins */
-#define NUM_OF_CONFIGURED_PINS0 8
+#define NUM_OF_CONFIGURED_PINS0 9
 /*! @brief User configuration structure */
 extern pin_settings_config_t g_pin_mux_InitConfigArr0[NUM_OF_CONFIGURED_PINS0];
 

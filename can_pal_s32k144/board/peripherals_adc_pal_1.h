@@ -3,8 +3,8 @@
  * will be overwritten if the respective S32 Config Tools is used to update this file.
  **********************************************************************************************************************/
 
-#ifndef can_pal1_H
-#define can_pal1_H
+#ifndef adc_pal_1_H
+#define adc_pal_1_H
 
 /**
  * @page misra_violations MISRA-C:2012 violations
@@ -17,18 +17,27 @@
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "can_pal.h"
+#include "adc_pal.h"
+#include <stddef.h>
 
 /*******************************************************************************
- * Global variables 
+ * Definitions 
  ******************************************************************************/
 
-/* User configuration */
+/*! @brief PAL instance information */
+extern const adc_instance_t adc_pal_1_instance;
 
-extern const can_user_config_t can_pal1_Config0;
+/*! @brief configuration structure */
+extern const adc_config_t adc_pal_1_config;
 
-extern can_instance_t can_pal1_instance;
+/*! @brief array of conversion groups */
+extern const adc_group_config_t adc_pal_1_groupArray[1u];
+
+/*! @brief group 0: input channels array */
+extern adc_input_chan_t adc_pal_1_channelsArray0[1u];
+/*! @brief group 0: results buffer */
+extern uint16_t adc_pal_1_results0[2u * 1u];
 
 
 
-#endif /* can_pal1_H */
+#endif /* adc_pal_1_H */
