@@ -99,6 +99,119 @@ void GPIOInit(void)
 }
 
 volatile int exit_code = 0;
+can_message_t rxMsg;
+
+
+/*
+void CheckCANRequest(void)
+{
+    status_t status = CAN_Receive(&can_pal1_instance, RX_MAILBOX, &rxMsg);
+
+    if (status == STATUS_SUCCESS)
+    {
+        while (CAN_GetTransferStatus(&can_pal1_instance, RX_MAILBOX) == STATUS_BUSY);
+
+        if ( (rxMsg.id == RX_MSG_ID) &&
+            rxMsg.length == 3 &&
+            rxMsg.data[0] == 0x22 &&
+            rxMsg.data[1] == 0xF1 &&
+            rxMsg.data[2] == 0x90)
+        {
+
+            uint16_t adcVal =  (uint16_t)ReadADCValue();
+
+            can_message_t txMsg = {
+                .cs = 0U,
+                .id = TX_MSG_ID,
+                .length = 6U,
+                .data = {
+                    0x05,
+                    0x62,
+                    0xF1,
+                    0x90,
+                    (uint8_t)(adcVal & 0xFF),
+                    (uint8_t)((adcVal >> 8) & 0xFF)
+                }
+            };
+
+
+            CAN_Send(&can_pal1_instance, TX_MAILBOX, &txMsg);
+        }
+    }
+}*/
+
+void CheckCANRequest(void)
+{
+    status_t status = CAN_Receive(&can_pal1_instance, RX_MAILBOX, &rxMsg);
+    if (status == STATUS_SUCCESS)
+    {
+        while (CAN_GetTransferStatus(&can_pal1_instance, RX_MAILBOX) == STATUS_BUSY);
+
+        uint8_t sid = rxMsg.data[0];
+        uint8_t didh = rxMsg.data[1];
+        uint8_t didl = rxMsg.data[2];
+
+        // Negative Response
+        can_message_t negRsp = {
+            .cs     = 0U,
+            .id     = TX_MSG_ID,
+            .length = 4U,
+            .data   = { 0x03, 0x7F, sid, 0x00 }
+        };
+
+        // NRC = 0x13: Incorrect message length
+        if (rxMsg.length != 4)
+        {
+            negRsp.data[3] = 0x13;
+            CAN_Send(&can_pal1_instance, TX_MAILBOX, &negRsp);
+            return;
+        }
+
+        // NRC = 0x11: Service not supported
+        if (sid != 0x22)
+        {
+            negRsp.data[3] = 0x11;
+            CAN_Send(&can_pal1_instance, TX_MAILBOX, &negRsp);
+            return;
+        }
+
+        // NRC = 0x31: Request out of range
+        if (didh != 0xF1 || didl != 0x90)
+        {
+            negRsp.data[3] = 0x31;
+            CAN_Send(&can_pal1_instance, TX_MAILBOX, &negRsp);
+            return;
+        }
+
+        // Correct
+        if ( (rxMsg.id == RX_MSG_ID) &&
+                    rxMsg.length == 4 &&
+                    rxMsg.data[0] == 0x03 &&
+                    rxMsg.data[1] == 0x22 &&
+                    rxMsg.data[2] == 0xF1 &&
+                    rxMsg.data[3] == 0x90)
+        {
+
+                    uint16_t adcVal =  (uint16_t)ReadADCValue();
+
+                    can_message_t txMsg = {
+                        .cs = 0U,
+                        .id = TX_MSG_ID,
+                        .length = 6U,
+                        .data = {
+                            0x05,
+                            0x62,
+                            0xF1,
+                            0x90,
+                            (uint8_t)(adcVal & 0xFF),
+                            (uint8_t)((adcVal >> 8) & 0xFF)
+                        };
+                    CAN_Send(&can_pal1_instance, TX_MAILBOX, &txMsg);
+        }
+    }
+}
+
+
 
 int main(void)
 {
@@ -116,25 +229,19 @@ int main(void)
 
     CAN_ConfigTxBuff(&can_pal1_instance, TX_MAILBOX, &txBuffCfg);
 
+    can_buff_config_t rxBuffCfg = {
+        .enableFD   = false,
+        .enableBRS  = false,
+        .fdPadding  = 0U,
+        .idType     = CAN_MSG_ID_STD,
+        .isRemote   = false
+    };
+    CAN_ConfigRxBuff(&can_pal1_instance, RX_MAILBOX, &rxBuffCfg, RX_MSG_ID);
+
     while(1)
     {
-        uint16_t adcVal = ReadADCValue();
-        uint16_t tempToSend = (uint16_t)(adcVal);
+        CheckCANRequest();
 
-        can_message_t message = {
-            .cs = 0U,
-            .id = TX_MSG_ID,
-            .length = 2U
-        };
-
-        message.data[0] = (uint8_t)(tempToSend & 0xFF);
-        message.data[1] = (uint8_t)((tempToSend >> 8) & 0xFF);
-
-        CAN_Send(&can_pal1_instance, TX_MAILBOX, &message);
-
-        // PINS_DRV_TogglePins(GPIO_PORT, (1 << LED0));
-
-        for (volatile uint32_t delay = 0; delay < 1000000; delay++);
     }
 
     return exit_code;
