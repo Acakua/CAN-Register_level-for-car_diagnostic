@@ -3,8 +3,8 @@
  * will be overwritten if the respective S32 Config Tools is used to update this file.
  **********************************************************************************************************************/
 
-#ifndef can_pal1_H
-#define can_pal1_H
+#ifndef ADC_PAL_CFG_H
+#define ADC_PAL_CFG_H
 
 /**
  * @page misra_violations MISRA-C:2012 violations
@@ -15,20 +15,11 @@
  *
  */
 /*******************************************************************************
- * Included files 
+ * Definitions
  ******************************************************************************/
-#include "can_pal.h"
-
-/*******************************************************************************
- * Global variables 
- ******************************************************************************/
-
-/* User configuration */
-
-extern const can_user_config_t can_pal1_Config0;
-
-extern can_instance_t can_pal1_instance;
+#define ADC_PAL_S32K1xx /* Define for selecting one of the ADC PAL type to be used */  
+#define ADC_PAL_MAX_NUM_HW_GROUPS_EN  1u /* Define the maximum number of HW triggered groups which may be enabled simultaneously */
 
 
+#endif /* ADC_PAL_CFG_H */
 
-#endif /* can_pal1_H */
