@@ -2,6 +2,11 @@
 #define FLEXCAN_H_
 
 #include <stdint.h>
+typedef struct {
+    uint32_t canID;
+    uint8_t dlc;
+    uint8_t data[8];
+} CAN_Message_t;
 
 /*
  * Khoi tao module FlexCAN0 cho S32K144
@@ -16,6 +21,7 @@ void FLEXCAN0_init(void);
  * Yeu cau:
  *   Bo dem tin nhan phai o trang thai INACTIVE truoc khi goi ham
  */
-void FLEXCAN0_transmit_msg(uint8_t buffer[]);
+void FLEXCAN0_transmit_msg(const CAN_Message_t *msg);
+
 
 #endif /* FLEXCAN_H_ */
