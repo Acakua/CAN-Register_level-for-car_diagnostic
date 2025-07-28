@@ -1,0 +1,25 @@
+-c
+-I../SDK/platform/pal/inc
+-I../SDK/platform/drivers/inc
+-I../SDK/rtos/osif
+-I"C:/Users/Addmin/Documents/CAN/CAN-Register_level-for-car_diagnostic/can_pal_s32k144/src"
+-I"C:/Users/Addmin/Documents/CAN/CAN-Register_level-for-car_diagnostic/can_pal_s32k144/board"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/include"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144/startup"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/S32K144"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices/common"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/devices"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/inc"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/drivers/src/clock/S32K1xx"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/platform/pal/inc"
+-I"E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.1/rtos/osif"
+-I../SDK/platform/drivers/src/adc
+-x assembler-with-cpp
+-DSTART_FROM_FLASH
+-g3
+-mcpu=cortex-m4
+-mfloat-abi=hard
+-mfpu=fpv4-sp-d16
+-specs=nano.specs
+-specs=nosys.specs
+--sysroot="E:/S32/S32DS/build_tools/gcc_b1620/gcc-6.3-arm32-eabi/arm-none-eabi/newlib"
