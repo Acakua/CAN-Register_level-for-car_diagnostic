@@ -1,4 +1,5 @@
 #include "uds.h"
+#include "adc.h"
 
 uint8_t currentSecurityLevel = SECURITY_LEVEL_ENGINE;
 uint16_t engineTemp = 0x1234;
@@ -163,7 +164,7 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx)
     for (uint8_t i = 2; i < msg_rx.dlc; i += 2) {
         uint16_t did = (msg_rx.data[i] << 8) | msg_rx.data[i + 1];
 
-        if (did == DID_ENGINE_TEMP || did == DID_THRESHOLD) {
+        if (did == DID_ENGINE_TEMP || did == DID_THRESHOLD || did == DID_ENGINE_LIGHT) {
             if (responseIdx + 4 > 8) {
                 msg_tx.data[3] = NRC_RESPONSE_TOO_LONG;
                 FLEXCAN0_transmit_msg(&msg_tx);
@@ -183,7 +184,22 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx)
                 return;
             }
 
-            uint16_t value = (did == DID_ENGINE_TEMP) ? ReadADCValue() : engineTemp;
+            uint16_t value;
+
+            if (did == DID_ENGINE_TEMP)
+			{
+				value = myADC_Read(13);
+			}
+			else if (did == DID_ENGINE_LIGHT)
+			{
+				value = myADC_Read(12);
+			}
+			else //DID_THRESHOLD
+			{
+				value = engineTemp;
+			}
+
+
 
             msg_tx.data[responseIdx++] = msg_rx.data[i];        // did high byte
             msg_tx.data[responseIdx++] = msg_rx.data[i + 1];    // did low byte

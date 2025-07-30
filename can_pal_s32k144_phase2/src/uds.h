@@ -23,7 +23,8 @@
 
 // ===== DIDs =====
 #define DID_ENGINE_TEMP      0xF190
-#define DID_THRESHOLD        0xF191
+#define DID_ENGINE_LIGHT     0xF191
+#define DID_THRESHOLD        0xF192
 
 // ===== Security Levels =====
 #define SECURITY_LEVEL_NONE     0
