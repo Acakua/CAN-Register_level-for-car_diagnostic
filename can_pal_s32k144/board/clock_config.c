@@ -20,6 +20,9 @@ processor_version: 0.0.0
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 
 #include "clock_config.h"
+#include "clock_manager.h"
+
+
 
 /*******************************************************************************
  * Definitions
