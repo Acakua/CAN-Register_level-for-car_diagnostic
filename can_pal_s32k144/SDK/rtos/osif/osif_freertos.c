@@ -92,16 +92,15 @@
  *END**************************************************************************/
 #if FEATURE_OSIF_FREERTOS_ISR_CONTEXT_METHOD == 1
 /* Cortex M device - read ICSR[IPSR] value */
-static inline bool osif_IsIsrContext(void)
-{
-    bool is_isr = false;
-    uint32_t ipsr_code = (uint32_t)( (S32_SCB->ICSR & S32_SCB_ICSR_VECTACTIVE_MASK) >> S32_SCB_ICSR_VECTACTIVE_SHIFT );
-    if (ipsr_code != 0u)
-    {
-        is_isr = true;
-    }
+static inline bool osif_IsIsrContext(void) {
+	bool is_isr = false;
+	uint32_t ipsr_code = (uint32_t) ((S32_SCB->ICSR
+			& S32_SCB_ICSR_VECTACTIVE_MASK) >> S32_SCB_ICSR_VECTACTIVE_SHIFT);
+	if (ipsr_code != 0u) {
+		is_isr = true;
+	}
 
-    return is_isr;
+	return is_isr;
 }
 #elif FEATURE_OSIF_FREERTOS_ISR_CONTEXT_METHOD == 2
 /* PowerPC device, for FreeRTOS 9.0.0 read the SPRG0 reg that denotes the interrupt nesting level */
@@ -129,13 +128,11 @@ static inline bool osif_IsIsrContext(void)
  *
  * Implements : OSIF_TimeDelay_freertos_Activity
  *END**************************************************************************/
-void OSIF_TimeDelay(uint32_t delay)
-{
-    /* One dependency for FreeRTOS config file */
-    /* INCLUDE_vTaskDelay */
-    vTaskDelay(MSEC_TO_TICK(delay));
+void OSIF_TimeDelay(uint32_t delay) {
+	/* One dependency for FreeRTOS config file */
+	/* INCLUDE_vTaskDelay */
+	vTaskDelay(MSEC_TO_TICK(delay));
 }
-
 
 /*FUNCTION**********************************************************************
  *
@@ -145,14 +142,14 @@ void OSIF_TimeDelay(uint32_t delay)
  *
  * Implements : OSIF_GetMilliseconds_freertos_Activity
  *END**************************************************************************/
-uint32_t OSIF_GetMilliseconds(void)
-{
-    /*
-     * Return the tick count in miliseconds
-     * Note: if configTICK_RATE_HZ is less than 1000, the return value will be truncated
-     * to 32-bit wide for large values of the tick count.
-     */
-    return (uint32_t)((((uint64_t) xTaskGetTickCount()) * 1000u) / configTICK_RATE_HZ);
+uint32_t OSIF_GetMilliseconds(void) {
+	/*
+	 * Return the tick count in miliseconds
+	 * Note: if configTICK_RATE_HZ is less than 1000, the return value will be truncated
+	 * to 32-bit wide for large values of the tick count.
+	 */
+	return (uint32_t) ((((uint64_t) xTaskGetTickCount()) * 1000u)
+			/ configTICK_RATE_HZ);
 }
 
 /*FUNCTION**********************************************************************
@@ -162,52 +159,45 @@ uint32_t OSIF_GetMilliseconds(void)
  *
  * Implements : OSIF_MutexLock_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_MutexLock(const mutex_t * const pMutex,
-                        const uint32_t timeout)
-{
-    /* The (pMutex == NULL) case is a valid option, signaling that the mutex does
-     * not need to be locked - do not use DEV_ASSERT in this case */
+status_t OSIF_MutexLock(const mutex_t *const pMutex, const uint32_t timeout) {
+	/* The (pMutex == NULL) case is a valid option, signaling that the mutex does
+	 * not need to be locked - do not use DEV_ASSERT in this case */
 
-    uint32_t timeoutTicks;
-    status_t osif_ret_code = STATUS_SUCCESS;
-    TaskHandle_t mutex_holder_handle;
-    TaskHandle_t current_task_handle;
-    BaseType_t operation_status = pdFAIL;
+	uint32_t timeoutTicks;
+	status_t osif_ret_code = STATUS_SUCCESS;
+	TaskHandle_t mutex_holder_handle;
+	TaskHandle_t current_task_handle;
+	BaseType_t operation_status = pdFAIL;
 
-    if (pMutex != NULL)
-    {
-        SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
-        /* Two dependencies for FreeRTOS config file */
-        /* INCLUDE_xQueueGetMutexHolder */
-        /* INCLUDE_xTaskGetCurrentTaskHandle */
-        mutex_holder_handle = xSemaphoreGetMutexHolder(mutex_handle);
-        current_task_handle = xTaskGetCurrentTaskHandle();
+	if (pMutex != NULL) {
+		SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
+		/* Two dependencies for FreeRTOS config file */
+		/* INCLUDE_xQueueGetMutexHolder */
+		/* INCLUDE_xTaskGetCurrentTaskHandle */
+		mutex_holder_handle = xSemaphoreGetMutexHolder(mutex_handle);
+		current_task_handle = xTaskGetCurrentTaskHandle();
 
-        /* If pMutex has been locked by current task, return error. */
-        if (mutex_holder_handle == current_task_handle)
-        {
-            osif_ret_code = STATUS_ERROR;
-        }
-        else
-        {
-            /* Convert timeout from millisecond to tick. */
-            if (timeout == OSIF_WAIT_FOREVER)
-            {
-                timeoutTicks = portMAX_DELAY;
-            }
-            else
-            {
-                timeoutTicks = MSEC_TO_TICK(timeout);
-            }
+		/* If pMutex has been locked by current task, return error. */
+		if (mutex_holder_handle == current_task_handle) {
+			osif_ret_code = STATUS_ERROR;
+		} else {
+			/* Convert timeout from millisecond to tick. */
+			if (timeout == OSIF_WAIT_FOREVER) {
+				timeoutTicks = portMAX_DELAY;
+			} else {
+				timeoutTicks = MSEC_TO_TICK(timeout);
+			}
 
-            /* Try to take the semaphore */
-            operation_status = xSemaphoreTake(mutex_handle, timeoutTicks);
+			/* Try to take the semaphore */
+			operation_status = xSemaphoreTake(mutex_handle, timeoutTicks);
 
-            osif_ret_code = (operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_TIMEOUT;
-        }
-    }
+			osif_ret_code =
+					(operation_status == pdPASS) ?
+							STATUS_SUCCESS : STATUS_TIMEOUT;
+		}
+	}
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -218,38 +208,35 @@ status_t OSIF_MutexLock(const mutex_t * const pMutex,
  *
  * Implements : OSIF_MutexUnlock_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_MutexUnlock(const mutex_t * const pMutex)
-{
-    /* The (pMutex == NULL) case is a valid option, signaling that the mutex does
-     * not need to be unlocked - do not use DEV_ASSERT in this case */
+status_t OSIF_MutexUnlock(const mutex_t *const pMutex) {
+	/* The (pMutex == NULL) case is a valid option, signaling that the mutex does
+	 * not need to be unlocked - do not use DEV_ASSERT in this case */
 
-    status_t osif_ret_code = STATUS_SUCCESS;
-    TaskHandle_t mutex_holder_handle;
-    TaskHandle_t current_task_handle;
-    BaseType_t operation_status = pdFAIL;
+	status_t osif_ret_code = STATUS_SUCCESS;
+	TaskHandle_t mutex_holder_handle;
+	TaskHandle_t current_task_handle;
+	BaseType_t operation_status = pdFAIL;
 
-    if (pMutex != NULL)
-    {
-        SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
-        /* Two dependencies for FreeRTOS config file */
-        /* INCLUDE_xQueueGetMutexHolder */
-        /* INCLUDE_xTaskGetCurrentTaskHandle */
-        mutex_holder_handle = xSemaphoreGetMutexHolder(mutex_handle);
-        current_task_handle = xTaskGetCurrentTaskHandle();
+	if (pMutex != NULL) {
+		SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
+		/* Two dependencies for FreeRTOS config file */
+		/* INCLUDE_xQueueGetMutexHolder */
+		/* INCLUDE_xTaskGetCurrentTaskHandle */
+		mutex_holder_handle = xSemaphoreGetMutexHolder(mutex_handle);
+		current_task_handle = xTaskGetCurrentTaskHandle();
 
-        /* If pMutex is not locked by current task, return error. */
-        if (mutex_holder_handle != current_task_handle)
-        {
-            osif_ret_code = STATUS_ERROR;
-        }
-        else
-        {
-            operation_status = xSemaphoreGive(mutex_handle);
-            osif_ret_code = (operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_ERROR;
-        }
-    }
+		/* If pMutex is not locked by current task, return error. */
+		if (mutex_holder_handle != current_task_handle) {
+			osif_ret_code = STATUS_ERROR;
+		} else {
+			operation_status = xSemaphoreGive(mutex_handle);
+			osif_ret_code =
+					(operation_status == pdPASS) ?
+							STATUS_SUCCESS : STATUS_ERROR;
+		}
+	}
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -259,15 +246,13 @@ status_t OSIF_MutexUnlock(const mutex_t * const pMutex)
  *
  * Implements : OSIF_MutexCreate_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_MutexCreate(mutex_t * const pMutex)
-{
-    /* The (pMutex == NULL) case is a valid option, signaling that the mutex does
-     * not need to be created - do not use DEV_ASSERT in this case */
+status_t OSIF_MutexCreate(mutex_t *const pMutex) {
+	/* The (pMutex == NULL) case is a valid option, signaling that the mutex does
+	 * not need to be created - do not use DEV_ASSERT in this case */
 
-    status_t osif_ret_code = STATUS_SUCCESS;
+	status_t osif_ret_code = STATUS_SUCCESS;
 
-    if (pMutex != NULL)
-    {
+	if (pMutex != NULL) {
 #if configSUPPORT_STATIC_ALLOCATION == 1
         pMutex->handle = xSemaphoreCreateMutexStatic(&(pMutex->buffer));
         if (pMutex->handle == NULL)
@@ -275,15 +260,14 @@ status_t OSIF_MutexCreate(mutex_t * const pMutex)
             osif_ret_code = STATUS_ERROR; /* mutex not created successfully */
         }
 #else /* configSUPPORT_STATIC_ALLOCATION == 0, it's dynamic allocation */
-        *pMutex = xSemaphoreCreateMutex();
-        if (*pMutex == NULL)
-        {
-            osif_ret_code = STATUS_ERROR; /* mutex not created successfully */
-        }
+		*pMutex = xSemaphoreCreateMutex();
+		if (*pMutex == NULL) {
+			osif_ret_code = STATUS_ERROR; /* mutex not created successfully */
+		}
 #endif
-    }
+	}
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -293,19 +277,17 @@ status_t OSIF_MutexCreate(mutex_t * const pMutex)
  *
  * Implements : OSIF_MutexDestroy_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_MutexDestroy(const mutex_t * const pMutex)
-{
-    /* The (pMutex == NULL) case is a valid option, signaling that the mutex does
-     * not need to be destroyed - do not use DEV_ASSERT in this case */
+status_t OSIF_MutexDestroy(const mutex_t *const pMutex) {
+	/* The (pMutex == NULL) case is a valid option, signaling that the mutex does
+	 * not need to be destroyed - do not use DEV_ASSERT in this case */
 
-    if (pMutex != NULL)
-    {
-        SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
-        DEV_ASSERT(mutex_handle);
-        vSemaphoreDelete(mutex_handle);
-    }
+	if (pMutex != NULL) {
+		SemaphoreHandle_t mutex_handle = SEM_HANDLE(*pMutex);
+		DEV_ASSERT(mutex_handle);
+		vSemaphoreDelete(mutex_handle);
+	}
 
-    return STATUS_SUCCESS;
+	return STATUS_SUCCESS;
 }
 
 /*FUNCTION**********************************************************************
@@ -316,32 +298,28 @@ status_t OSIF_MutexDestroy(const mutex_t * const pMutex)
  *
  * Implements : OSIF_SemaWait_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_SemaWait(semaphore_t * const pSem,
-                       const uint32_t timeout)
-{
-    DEV_ASSERT(pSem);
+status_t OSIF_SemaWait(semaphore_t *const pSem, const uint32_t timeout) {
+	DEV_ASSERT(pSem);
 
-    SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
-    uint32_t timeoutTicks;
-    BaseType_t operation_status;
-    status_t osif_ret_code;
+	SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
+	uint32_t timeoutTicks;
+	BaseType_t operation_status;
+	status_t osif_ret_code;
 
-    /* Convert timeout from millisecond to ticks. */
-    if (timeout == OSIF_WAIT_FOREVER)
-    {
-        timeoutTicks = portMAX_DELAY;
-    }
-    else
-    {
-        timeoutTicks = MSEC_TO_TICK(timeout);
-    }
+	/* Convert timeout from millisecond to ticks. */
+	if (timeout == OSIF_WAIT_FOREVER) {
+		timeoutTicks = portMAX_DELAY;
+	} else {
+		timeoutTicks = MSEC_TO_TICK(timeout);
+	}
 
-    /* Try to take the semaphore */
-    operation_status = xSemaphoreTake(sem_handle, timeoutTicks);
+	/* Try to take the semaphore */
+	operation_status = xSemaphoreTake(sem_handle, timeoutTicks);
 
-    osif_ret_code = (operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_TIMEOUT;
+	osif_ret_code =
+			(operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_TIMEOUT;
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -351,38 +329,34 @@ status_t OSIF_SemaWait(semaphore_t * const pSem,
  *
  * Implements : OSIF_SemaPost_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_SemaPost(semaphore_t * const pSem)
-{
-    DEV_ASSERT(pSem);
+status_t OSIF_SemaPost(semaphore_t *const pSem) {
+	DEV_ASSERT(pSem);
 
-    BaseType_t operation_status = pdFAIL;
-    status_t osif_ret_code;
+	BaseType_t operation_status = pdFAIL;
+	status_t osif_ret_code;
 
-    SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
-    /* Check if the post operation is executed from ISR context */
-    bool is_isr = osif_IsIsrContext();
-    if (is_isr)
-    {
-        /* Execution from exception handler (ISR) */
-        BaseType_t taskWoken = pdFALSE;
-        operation_status = xSemaphoreGiveFromISR(sem_handle, &taskWoken);
+	SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
+	/* Check if the post operation is executed from ISR context */
+	bool is_isr = osif_IsIsrContext();
+	if (is_isr) {
+		/* Execution from exception handler (ISR) */
+		BaseType_t taskWoken = pdFALSE;
+		operation_status = xSemaphoreGiveFromISR(sem_handle, &taskWoken);
 
-        if (operation_status == pdPASS)
-        {
-            /* Perform a context switch if necessary */
-            portYIELD_FROM_ISR(taskWoken);
-        }
-    }
-    else
-    {
-        /* Execution from task */
-        operation_status = xSemaphoreGive(sem_handle);
-    }
+		if (operation_status == pdPASS) {
+			/* Perform a context switch if necessary */
+			portYIELD_FROM_ISR(taskWoken);
+		}
+	} else {
+		/* Execution from task */
+		operation_status = xSemaphoreGive(sem_handle);
+	}
 
-    /* pdFAIL in case that the semaphore is full */
-    osif_ret_code = (operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_ERROR;
+	/* pdFAIL in case that the semaphore is full */
+	osif_ret_code =
+			(operation_status == pdPASS) ? STATUS_SUCCESS : STATUS_ERROR;
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -392,12 +366,10 @@ status_t OSIF_SemaPost(semaphore_t * const pSem)
  *
  * Implements : OSIF_SemaCreate_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_SemaCreate(semaphore_t * const pSem,
-                         const uint8_t initValue)
-{
-    DEV_ASSERT(pSem);
+status_t OSIF_SemaCreate(semaphore_t *const pSem, const uint8_t initValue) {
+	DEV_ASSERT(pSem);
 
-    status_t osif_ret_code = STATUS_SUCCESS;
+	status_t osif_ret_code = STATUS_SUCCESS;
 
 #if configSUPPORT_STATIC_ALLOCATION == 1
     pSem->handle = xSemaphoreCreateCountingStatic(0xFFu, initValue, &(pSem->buffer));
@@ -406,14 +378,13 @@ status_t OSIF_SemaCreate(semaphore_t * const pSem,
         osif_ret_code = STATUS_ERROR; /* semaphore not created successfully */
     }
 #else /* configSUPPORT_STATIC_ALLOCATION == 0, it's dynamic allocation */
-    *pSem = xSemaphoreCreateCounting(0xFFu, initValue);
-    if (*pSem == NULL)
-    {
-        osif_ret_code = STATUS_ERROR; /* semaphore not created successfully */
-    }
+	*pSem = xSemaphoreCreateCounting(0xFFu, initValue);
+	if (*pSem == NULL) {
+		osif_ret_code = STATUS_ERROR; /* semaphore not created successfully */
+	}
 #endif
 
-    return osif_ret_code;
+	return osif_ret_code;
 }
 
 /*FUNCTION**********************************************************************
@@ -423,15 +394,14 @@ status_t OSIF_SemaCreate(semaphore_t * const pSem,
  *
  * Implements : OSIF_SemaDestroy_freertos_Activity
  *END**************************************************************************/
-status_t OSIF_SemaDestroy(const semaphore_t * const pSem)
-{
-    DEV_ASSERT(pSem);
-    SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
+status_t OSIF_SemaDestroy(const semaphore_t *const pSem) {
+	DEV_ASSERT(pSem);
+	SemaphoreHandle_t sem_handle = SEM_HANDLE(*pSem);
 
-    DEV_ASSERT(sem_handle);
-    vSemaphoreDelete(sem_handle);
+	DEV_ASSERT(sem_handle);
+	vSemaphoreDelete(sem_handle);
 
-    return STATUS_SUCCESS;
+	return STATUS_SUCCESS;
 }
 
 /*******************************************************************************
