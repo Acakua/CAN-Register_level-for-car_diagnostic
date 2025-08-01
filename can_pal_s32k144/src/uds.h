@@ -42,6 +42,7 @@ void UDS_DispatchService(const CAN_Message_t msg_rx);
 void handleECUReset(const CAN_Message_t msg_rx);
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx);
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx);
+void UDS_SendResponse(void);
 
 // External dependencies (must be implemented elsewhere)
 bool isResetConditionOk(void);
@@ -50,6 +51,5 @@ bool isConditionOk(uint16_t did);
 bool writeToNVM(uint16_t did, uint16_t value);
 uint16_t ReadADCValue(void);
 void ECU_Reset(void);
-
 
 #endif
