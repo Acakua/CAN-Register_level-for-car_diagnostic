@@ -1,9 +1,4 @@
 /*
- * dtc.c
- *
- * Created on: Aug 2, 2025
- * Author: Your Name
- *
  * @brief  Implementation of the Diagnostic Trouble Code (DTC) management module.
  */
 #include "dtc.h"
