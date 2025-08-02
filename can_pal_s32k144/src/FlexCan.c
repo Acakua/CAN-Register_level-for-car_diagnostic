@@ -25,24 +25,27 @@ void FLEXCAN0_init(void) {
 }
 
 void FLEXCAN0_transmit_msg(const CAN_Message_t *msg) {
-    // Clear interrupt flag for TX mailbox
-    CAN0->IFLAG1 = 1 << TX_MB_INDEX;
+    CAN0->RAMn[MSG_BUF_SIZE * TX_MB_INDEX] = 0x08000000;
 
     CAN0->RAMn[MSG_BUF_SIZE * TX_MB_INDEX + 1] = (msg->canID << 18);
-    CAN0->RAMn[MSG_BUF_SIZE * TX_MB_INDEX] = 0x0C400000 | ((msg->dlc & 0xF) << 16);
 
     uint32_t dataWord0 = ((uint32_t)msg->data[0] << 24) |
                          ((uint32_t)msg->data[1] << 16) |
                          ((uint32_t)msg->data[2] << 8)  |
                          ((uint32_t)msg->data[3]);
-
     uint32_t dataWord1 = ((uint32_t)msg->data[4] << 24) |
                          ((uint32_t)msg->data[5] << 16) |
                          ((uint32_t)msg->data[6] << 8)  |
                          ((uint32_t)msg->data[7]);
-
     CAN0->RAMn[4 * TX_MB_INDEX + 2] = dataWord0;
     CAN0->RAMn[4 * TX_MB_INDEX + 3] = dataWord1;
+
+    CAN0->IFLAG1 = (1 << TX_MB_INDEX);
+
+    CAN0->RAMn[MSG_BUF_SIZE * TX_MB_INDEX] = 0x0C400000 | ((msg->dlc & 0xF) << 16);
+
+    while (!(CAN0->IFLAG1 & (1 << TX_MB_INDEX))) {}
+    CAN0->IFLAG1 = (1 << TX_MB_INDEX);
 }
 
 int FLEXCAN0_receive_msg(CAN_Message_t *msg) {
@@ -72,7 +75,7 @@ int FLEXCAN0_receive_msg(CAN_Message_t *msg) {
         // Ready to receive next message, reset RX mailbox
         CAN0->RAMn[4 * RX_MB_INDEX] = 0x04000000 | ((msg->dlc & 0xF) << 16);
 
-        return 1;  // Có message mới
+        return 1;
     }
-    return 0;  // Không có message mới
+    return 0;
 }
