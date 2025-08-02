@@ -54,6 +54,8 @@ LDSCRIPT = ./SDK/platform/devices/S32K144/linker/gcc/S32K144_64_flash.ld
 SRCS = \
   src/main.c \
   src/FlexCan.c \
+	src/adc.c \
+	src/uds.c \
   board/clock_config.c \
   board/pin_mux.c \
   Project_Settings/Startup_Code/startup_s32K144.S \

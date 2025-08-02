@@ -1,7 +1,11 @@
+#ifndef FLEXCAN_H
+#define FLEXCAN_H
+
+
 #define RX_MB_INDEX  0UL
 #define TX_MB_INDEX  1UL
-#define RX_MSG_ID    0x7DF
-#define TX_MSG_ID    0x7E8
+#define RX_MSG_ID    0x769
+#define TX_MSG_ID    0x768
 #define MSG_BUF_SIZE 4
 
 typedef struct {
@@ -13,3 +17,6 @@ typedef struct {
 void FLEXCAN0_init(void);
 void FLEXCAN0_transmit_msg(const CAN_Message_t *msg);
 int FLEXCAN0_receive_msg(CAN_Message_t *msg);
+
+
+#endif
