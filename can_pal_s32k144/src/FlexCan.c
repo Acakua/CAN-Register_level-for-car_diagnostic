@@ -16,7 +16,7 @@ void FLEXCAN0_init(void) {
     for (i = 0; i < 16; i++) CAN0->RXIMR[i] = 0xFFFFFFFF;
     CAN0->RXMGMASK = 0x7FF << 18;
 
-    CAN0->RAMn[4*RX_MB_INDEX + 1] = RX_MSG_ID << 18;
+    CAN0->RAMn[4*RX_MB_INDEX + 1] = RX_MSG_ID_UDS << 18;
     CAN0->RAMn[4*RX_MB_INDEX] = 0x04000000 | (8 << 16);  // Ready to receive, DLC=8
 
     CAN0->MCR = 0x0000001F;
@@ -48,16 +48,25 @@ void FLEXCAN0_transmit_msg(const CAN_Message_t *msg) {
     CAN0->IFLAG1 = (1 << TX_MB_INDEX);
 }
 
-int FLEXCAN0_receive_msg(CAN_Message_t *msg) {
+
+int FLEXCAN0_receive_msg(CAN_Message_t *msg, uint32_t expectedID) {
     if (CAN0->IFLAG1 & (1 << RX_MB_INDEX)) {
-        // Clear interrupt flag for RX mailbox
-        CAN0->IFLAG1 = (1 << RX_MB_INDEX);
+        CAN0->IFLAG1 = (1 << RX_MB_INDEX);   // Clear flag RX
 
         uint32_t word0 = CAN0->RAMn[4 * RX_MB_INDEX];
         uint32_t word1 = CAN0->RAMn[4 * RX_MB_INDEX + 1];
 
-        msg->canID = (word1 >> 18) & 0x7FF;
-        msg->dlc = (word0 >> 16) & 0xF;
+        uint32_t rxID = (word1 >> 18) & 0x7FF;   // ID
+        uint8_t dlc  = (word0 >> 16) & 0xF;
+
+        if (rxID != expectedID) {
+            // Reset mailbox (reset 8 byte)
+            CAN0->RAMn[4 * RX_MB_INDEX] = 0x04000000 | (8 << 16);
+            return 0;
+        }
+
+        msg->canID = rxID;
+        msg->dlc = dlc;
 
         uint32_t dataWord0 = CAN0->RAMn[4 * RX_MB_INDEX + 2];
         uint32_t dataWord1 = CAN0->RAMn[4 * RX_MB_INDEX + 3];
@@ -66,13 +75,12 @@ int FLEXCAN0_receive_msg(CAN_Message_t *msg) {
         msg->data[1] = (dataWord0 >> 16) & 0xFF;
         msg->data[2] = (dataWord0 >> 8)  & 0xFF;
         msg->data[3] = (dataWord0 >> 0)  & 0xFF;
-
         msg->data[4] = (dataWord1 >> 24) & 0xFF;
         msg->data[5] = (dataWord1 >> 16) & 0xFF;
         msg->data[6] = (dataWord1 >> 8)  & 0xFF;
         msg->data[7] = (dataWord1 >> 0)  & 0xFF;
 
-        // Ready to receive next message, reset RX mailbox
+        // Reset mailbox (reset so byte vua nhan)
         CAN0->RAMn[4 * RX_MB_INDEX] = 0x04000000 | ((msg->dlc & 0xF) << 16);
 
         return 1;

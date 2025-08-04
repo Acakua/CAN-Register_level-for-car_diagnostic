@@ -25,8 +25,7 @@ int main(void)
     CAN_Message_t msg_rx;
     while (1)
     {
-
-        if (FLEXCAN0_receive_msg(&msg_rx)) {
+        if (FLEXCAN0_receive_msg(&msg_rx, RX_MSG_ID_UDS)) {
             UDS_DispatchService(msg_rx);
         }
     }
