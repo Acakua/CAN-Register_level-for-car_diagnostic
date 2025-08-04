@@ -6,6 +6,30 @@
 #include <string.h>
 #include "FlexCan.h"
 
+/**
+ * @brief Defines the type of response flow for the current UDS transaction.
+ */
+typedef enum {
+    UDS_FLOW_NONE = 0, /* No response should be sent */
+    UDS_FLOW_POS,      /* A positive response should be sent */
+    UDS_FLOW_NEG       /* A negative response should be sent */
+} UDS_FlowType;
+
+/**
+ * @brief Holds the complete context for the currently processing UDS transaction.
+ * All necessary data for sending a response is stored here.
+ */
+typedef struct {
+    UDS_FlowType   flow;          /* POS / NEG / NONE */
+    uint8_t        sid;           /* The Service ID of the original request */
+    uint8_t        nrc;           /* Negative Response Code if flow = NEG */
+    const uint8_t* payload;       /* Pointer to the positive response payload */
+    uint16_t       payload_len;   /* Length of the positive response payload */
+} UDS_Context;
+
+/* Global context for the UDS service handler */
+static UDS_Context udsCtx;
+
 /* --- START OF ISO-TP AND RESPONSE SENDING LOGIC --- */
 
 /**
@@ -29,7 +53,7 @@ static void delay_ms(volatile uint32_t ms) {
  */
 static void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
 	CAN_Message_t msg;
-	msg.canID = TX_MSG_ID;
+	msg.canID = TX_MSG_ID_UDS;
 	msg.dlc = 8; /* Both First Frames and Consecutive Frames always use 8-byte DLC. */
 
 	uint16_t bytes_sent = 0;
@@ -78,97 +102,38 @@ static void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
 	}
 }
 
-/**
- * @brief Sends a single-frame response using the custom format.
- * @param response_sid The service ID for the response (e.g., 0x59).
- * @param payload Pointer to the data payload.
- * @param payload_length Length of the data payload.
- */
-static void sendUDSResponse(uint8_t response_sid, const uint8_t *payload, uint16_t payload_length) {
-	CAN_Message_t msg_to_transmit;
-	msg_to_transmit.canID = TX_MSG_ID;
-
-	/* This is a custom, non-standard single-frame format. */
-    /* Byte 0: Length of the following data (SID + payload). */
-	uint8_t length_byte = payload_length + 1;
-	msg_to_transmit.dlc = length_byte + 1;
-
-	msg_to_transmit.data[0] = length_byte;
-	msg_to_transmit.data[1] = response_sid;
-
-	if (payload != NULL && payload_length > 0) {
-		memcpy(&msg_to_transmit.data[2], payload, payload_length);
-	}
-
-	FLEXCAN0_transmit_msg(&msg_to_transmit);
-}
-
-/**
- * @brief Sends a Negative Response Code (NRC).
- * NRCs are always short and sent as a single frame.
- */
-static void sendNRC(uint8_t sid, uint8_t nrc) {
-	uint8_t nrc_payload[2];
-	nrc_payload[0] = sid; /* Echo the original Service ID. */
-	nrc_payload[1] = nrc; /* The Negative Response Code. */
-	sendUDSResponse(0x7F, nrc_payload, sizeof(nrc_payload)); /* The SID for an NRC is always 0x7F. */
-}
-
-/**
- * @brief Constructs and sends a Positive Response.
- * This function is the main dispatcher for sending responses. It automatically
- * chooses between the custom single-frame format and the multi-frame ISO-TP
- * format based on the total message length.
- */
-static void sendPositiveResponse(uint8_t sid, const uint8_t *payload, uint16_t length) {
-    uint8_t response_sid = sid + 0x40; /* Positive Response SID is original SID + 0x40. */
-
-    /* Calculate the total size the CAN frame would need for the custom single-frame format. */
-    /* Size = 1 (length byte) + 1 (SID) + data length */
-    uint16_t total_can_frame_size = 1 + 1 + length;
-
-    if (total_can_frame_size <= 8) {
-        /* The message is short enough for a single frame. Use the custom format. */
-        sendUDSResponse(response_sid, payload, length);
-    } else {
-        /* The message is too long and must be sent using ISO-TP multi-frame. */
-        static uint8_t full_uds_payload[4095]; /* A large static buffer for the full UDS message. */
-        full_uds_payload[0] = response_sid;
-        if (payload != NULL && length > 0) {
-            memcpy(&full_uds_payload[1], payload, length);
-        }
-        UDS_SendMultiFrameISO_TP(full_uds_payload, length + 1);
-    }
-}
-
-/* --- Sub-function Handlers --- */
-
 /*
  * @brief Handles sub-function 0x01: reportNumberOfDTCByStatusMask.
  */
 static void sf_reportNumberOfDTCByStatusMask(const CAN_Message_t *requestMsg) {
     /* Expected request format: [Length=3] [SID=19] [SubFunc=01] [StatusMask] */
-    if (requestMsg->data[0] != 3) {
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_INCORRECT_MESSAGE_LENGTH_OR_FORMAT);
-        return;
-    }
-    uint8_t requested_mask = requestMsg->data[3];
-    uint16_t count = 0;
-    /* Iterate through all DTC slots to find matches. */
-    for (uint8_t i = 0; i < DTC_GetCount(); ++i) {
-        DTC_Record_t record;
-        /* A DTC matches if all bits in the requested mask are also set in the stored mask. */
-        if (DTC_GetRecord(i, &record) && ((record.status_mask & requested_mask) == requested_mask)) {
-            count++;
-        }
-    }
-    /* Build and send the positive response. */
-    uint8_t payload[4];
-    payload[0] = SF_REPORT_NUMBER_OF_DTC_BY_STATUS_MASK;
-    payload[1] = DTC_FORMAT_ID_ISO14229_1;
-    payload[2] = (uint8_t)(count >> 8);   /* Count, High Byte */
-    payload[3] = (uint8_t)(count & 0xFF); /* Count, Low Byte */
-    sendPositiveResponse(SID_READ_DTC_INFORMATION, payload, sizeof(payload));
+	if (requestMsg->data[0] != 3) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+	static uint8_t payload[4];
+	uint8_t requested_mask = requestMsg->data[3];
+	uint16_t count = 0;
+
+	for (uint8_t i = 0; i < DTC_GetCount(); ++i) {
+		DTC_Record_t record;
+		if (DTC_GetRecord(i, &record)) {
+			if ((requested_mask == 0xFF)
+					|| ((record.status_mask & requested_mask) == requested_mask)) {
+				count++;
+			}
+		}
+	}
+
+	payload[0] = SF_REPORT_NUMBER_OF_DTC_BY_STATUS_MASK;
+	payload[1] = DTC_FORMAT_ID_ISO14229_1;
+	payload[2] = (uint8_t) (count >> 8);
+	payload[3] = (uint8_t) (count & 0xFF);
+
+	udsCtx.flow = UDS_FLOW_POS;
+	udsCtx.payload = payload;
+	udsCtx.payload_len = sizeof(payload);
 }
 
 
@@ -176,28 +141,34 @@ static void sf_reportNumberOfDTCByStatusMask(const CAN_Message_t *requestMsg) {
  * @brief Handles sub-function 0x02: reportDTCByStatusMask.
  */
 static void sf_reportDTCByStatusMask(const CAN_Message_t *requestMsg) {
-    if (requestMsg->data[0] != 3) {
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_INCORRECT_MESSAGE_LENGTH_OR_FORMAT);
-        return;
-    }
-    uint8_t requested_mask = requestMsg->data[3];
+	if (requestMsg->data[0] != 3) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
     /* Use a static payload buffer to avoid putting a large array on the stack. */
     static uint8_t payload[1 + (DTC_COUNT * 4)];
     uint16_t payload_len = 0;
+    uint8_t requested_mask = requestMsg->data[3];
     payload[payload_len++] = SF_REPORT_DTC_BY_STATUS_MASK;
 
-    for (uint8_t i = 0; i < DTC_GetCount(); ++i) {
-        DTC_Record_t record;
-        if (DTC_GetRecord(i, &record) && ((record.status_mask & requested_mask) == requested_mask)) {
-            /* For each matching DTC, append its 3-byte code and 1-byte status to the payload. */
-            payload[payload_len++] = (uint8_t)(record.dtc_code >> 16);
-            payload[payload_len++] = (uint8_t)(record.dtc_code >> 8);
-            payload[payload_len++] = (uint8_t)(record.dtc_code);
-            payload[payload_len++] = record.status_mask;
-        }
-    }
-    /* Send the response. This may be a single or multi-frame message. */
-    sendPositiveResponse(SID_READ_DTC_INFORMATION, payload, payload_len);
+	for (uint8_t i = 0; i < DTC_GetCount(); ++i) {
+		DTC_Record_t record;
+		if (DTC_GetRecord(i, &record)) {
+			if ((requested_mask == 0xFF)
+					|| ((record.status_mask & requested_mask) == requested_mask)) {
+				/* For each matching DTC, append its 3-byte code and 1-byte status to the payload. */
+				payload[payload_len++] = (uint8_t) (record.dtc_code >> 16);
+				payload[payload_len++] = (uint8_t) (record.dtc_code >> 8);
+				payload[payload_len++] = (uint8_t) (record.dtc_code);
+				payload[payload_len++] = record.status_mask;
+			}
+		}
+	}
+
+    udsCtx.flow = UDS_FLOW_POS;
+	udsCtx.payload = payload;
+	udsCtx.payload_len = payload_len;
 }
 
 
@@ -206,10 +177,19 @@ static void sf_reportDTCByStatusMask(const CAN_Message_t *requestMsg) {
  */
 static void sf_reportDTCSnapshotByDTCNumber(const CAN_Message_t *requestMsg) {
     /* Expected request format: [Length=6] [SID=19] [SubFunc=04] [DTC H] [DTC M] [DTC L] [RecNum] */
-    if (requestMsg->data[0] != 6) {
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_INCORRECT_MESSAGE_LENGTH_OR_FORMAT);
-        return;
-    }
+	if (requestMsg->data[0] != 6) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
+	uint8_t requested_record_number = requestMsg->data[6];
+
+	if(requested_record_number != 0x01 && requested_record_number != 0xFF) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+		return;
+	}
     uint32_t requested_dtc = (requestMsg->data[3] << 16) | (requestMsg->data[4] << 8) | requestMsg->data[5];
     /* uint8_t record_number = requestMsg->data[6]; // We only support 1 record, so this is unused. */
     int8_t index = DTC_Find(requested_dtc);
@@ -234,24 +214,30 @@ static void sf_reportDTCSnapshotByDTCNumber(const CAN_Message_t *requestMsg) {
 			payload[payload_len++] = (uint8_t) (record.snapshot.year >> 8);   /* Year, High Byte (Big-Endian) */
 			payload[payload_len++] = (uint8_t) (record.snapshot.year & 0xFF); /* Year, Low Byte */
 
-            /* Send the 11-byte payload. This will be sent as a multi-frame ISO-TP message. */
-            sendPositiveResponse(SID_READ_DTC_INFORMATION, payload, payload_len);
-            return;
+			udsCtx.flow = UDS_FLOW_POS;
+			udsCtx.payload = payload;
+			udsCtx.payload_len = payload_len;
+			return;
         }
     }
-    sendNRC(SID_READ_DTC_INFORMATION, NRC_REQUEST_OUT_OF_RANGE);
+	udsCtx.flow = UDS_FLOW_NEG;
+	udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
 }
 
 /*
  * @brief Handles sub-function 0x0A: reportSupportedDTC.
  */
 static void sf_reportSupportedDTC(const CAN_Message_t *requestMsg) {
-    if (requestMsg->data[0] != 2) {
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_INCORRECT_MESSAGE_LENGTH_OR_FORMAT);
-        return;
-    }
+	/* Expected request format: [Length=2] [SID=19] [SubFunc=0A] */
+	if (requestMsg->data[0] != 2) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
     static uint8_t payload[1 + (DTC_COUNT * 4)];
     uint16_t payload_len = 0;
+
     payload[payload_len++] = SF_REPORT_SUPPORTED_DTC;
     for (uint8_t i = 0; i < DTC_GetCount(); ++i) {
         DTC_Record_t record;
@@ -262,7 +248,9 @@ static void sf_reportSupportedDTC(const CAN_Message_t *requestMsg) {
             payload[payload_len++] = record.status_mask;
         }
     }
-    sendPositiveResponse(SID_READ_DTC_INFORMATION, payload, payload_len);
+	udsCtx.flow = UDS_FLOW_POS;
+	udsCtx.payload = payload;
+	udsCtx.payload_len = payload_len;
 }
 
 /* --- Main Service Handler --- */
@@ -270,12 +258,19 @@ static void sf_reportSupportedDTC(const CAN_Message_t *requestMsg) {
 /*
  * @brief See uds.h for function documentation.
  */
-void UDS_ReadDTCInformation(const CAN_Message_t *requestMsg) {
+void handleReadDTCInformation(const CAN_Message_t *requestMsg) {
+	/* Reset context, but crucially, set the SID for this transaction */
+	udsCtx.flow = UDS_FLOW_NONE;
+	udsCtx.sid = UDS_SERVICE_READ_DTC_INFORMATION; // Store SID in context
+	udsCtx.nrc = 0;
+	udsCtx.payload = NULL;
+	udsCtx.payload_len = 0;
+
     /* Perform initial validation on the incoming request frame.
        The DLC must match the length specified in the first data byte. */
     if (requestMsg->dlc < 3 || requestMsg->dlc != (requestMsg->data[0] + 1)) {
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_INCORRECT_MESSAGE_LENGTH_OR_FORMAT);
-        return;
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
     }
 
     /* In our custom format, SID is at data[1] and Sub-function is at data[2]. */
@@ -297,7 +292,73 @@ void UDS_ReadDTCInformation(const CAN_Message_t *requestMsg) {
         break;
     default:
         /* If the sub-function is not supported, send a negative response. */
-        sendNRC(SID_READ_DTC_INFORMATION, NRC_SUB_FUNCTION_NOT_SUPPORTED);
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_SUBFUNC_NOT_SUPPORTED;
         break;
+    }
+}
+
+
+void UDS_DispatchService(const CAN_Message_t msg_rx) {
+	uint8_t sid = msg_rx.data[1];
+
+	/* reset context */
+	udsCtx.flow = UDS_FLOW_NONE;
+	udsCtx.sid = sid;
+	udsCtx.nrc = 0;
+
+	switch (sid) {
+	case UDS_SERVICE_READ_DTC_INFORMATION:
+		handleReadDTCInformation(&msg_rx);
+		break;
+	default:
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;
+		break;
+	}
+	UDS_SendResponse();
+}
+
+/*
+ * @brief See uds.h for function documentation.
+ */
+ void UDS_SendResponse(void) {
+    if (udsCtx.flow == UDS_FLOW_NEG) {
+        /* Send Negative Response */
+        CAN_Message_t msg;
+        msg.canID = TX_MSG_ID_UDS;
+        msg.dlc   = 4;
+        msg.data[0] = 0x03;       /* PCI: Single Frame, length 3 */
+        msg.data[1] = 0x7F;       /* NRC Service ID */
+        msg.data[2] = udsCtx.sid; /* Original SID from context */
+        msg.data[3] = udsCtx.nrc; /* NRC from context */
+        FLEXCAN0_transmit_msg(&msg);
+
+    } else if (udsCtx.flow == UDS_FLOW_POS) {
+        /* Send Positive Response */
+        uint8_t response_sid = udsCtx.sid + 0x40;
+        uint16_t total_uds_length = 1 + udsCtx.payload_len; /* RspSID + payload */
+
+        if (total_uds_length <= 7) {
+            /* Fits in a single frame */
+            CAN_Message_t msg;
+            msg.canID   = TX_MSG_ID_UDS;
+            msg.dlc     = 1 + total_uds_length;
+            msg.data[0] = (uint8_t)total_uds_length;
+            msg.data[1] = response_sid;
+
+            if (udsCtx.payload != NULL && udsCtx.payload_len > 0) {
+                memcpy(&msg.data[2], udsCtx.payload, udsCtx.payload_len);
+            }
+            FLEXCAN0_transmit_msg(&msg);
+        } else {
+            /* Requires multi-frame (ISO-TP) */
+            static uint8_t full_uds_payload[4095];
+            full_uds_payload[0] = response_sid;
+            if (udsCtx.payload != NULL && udsCtx.payload_len > 0) {
+                memcpy(&full_uds_payload[1], udsCtx.payload, udsCtx.payload_len);
+            }
+            UDS_SendMultiFrameISO_TP(full_uds_payload, total_uds_length);
+        }
     }
 }
