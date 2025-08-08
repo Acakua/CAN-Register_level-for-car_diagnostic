@@ -72,6 +72,13 @@ void UDS_SendResponse(void) {
 }
 
 void handleECUReset(const CAN_Message_t msg_rx) {
+	// check length
+	if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
 	if (msg_rx.dlc < 3) {
 		udsCtx.flow = UDS_FLOW_NEG;
 		udsCtx.nrc = NRC_INCORRECT_LENGTH;
@@ -108,16 +115,26 @@ void handleECUReset(const CAN_Message_t msg_rx) {
 	    udsCtx.msg.data[2] = subFunc;
 	} else {
 	    udsCtx.flow = UDS_FLOW_NONE;
+	    ECU_Reset();
 	}
 
 }
 
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
+	// check length
+	if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
+
 	if (msg_rx.dlc < 5) {    // 1 length, 1 sid, 2 did, min 1 data
 		udsCtx.flow = UDS_FLOW_NEG;
 		udsCtx.nrc = NRC_INCORRECT_LENGTH;
 		return;
 	}
+
 
 	uint16_t did = (msg_rx.data[2] << 8) | msg_rx.data[3];
 
@@ -171,6 +188,13 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
 
 // ==== Read Data By Identifier Handler ====
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
+	// check length
+	if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
 	if (msg_rx.dlc < 4 || ((msg_rx.dlc) % 2) != 0) {
 		udsCtx.flow = UDS_FLOW_NEG;
 		udsCtx.nrc = NRC_INCORRECT_LENGTH;
