@@ -26,6 +26,13 @@
 #define DTC_REGION_OFFSET   (DID_REGION_OFFSET + DID_REGION_SIZE)
 #define DTC_REGION_SIZE     (DTC_COUNT * DTC_SLOT_SIZE)
 
+/* Defines the storage offset for each DID within the NVM's DID region. */
+/* Each slot is spaced by DID_MAX_SIZE to prevent data collision. */
+#define DID_ENGINE_TEMP_NVM_OFFSET    (DID_REGION_OFFSET + (0 * DID_MAX_SIZE))
+#define DID_ENGINE_LIGHT_NVM_OFFSET   (DID_REGION_OFFSET + (1 * DID_MAX_SIZE))
+#define DID_THRESHOLD_NVM_OFFSET      (DID_REGION_OFFSET + (2 * DID_MAX_SIZE))
+
+
 /**
  * @brief Represents the status of NVM operations.
  */
