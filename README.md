@@ -16,25 +16,30 @@ Dự án này sử dụng Makefile thủ công (không dùng IDE) để build fi
 - Tải tại: https://objects.githubusercontent.com/github-production-release-asset-2e65be/80988227/82422b48-9b91-44f3-b0cb-6472f27b1bf0?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250721%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250721T021638Z&X-Amz-Expires=1800&X-Amz-Signature=33861da4f0893378aca8faca00eb9ea7462d15730c8b1e68b2f4620a46cbfed6&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dmsys2-x86_64-20250622.exe&response-content-type=application%2Foctet-stream
 - Sau khi cài đặt thêm vào PATH
 #### Hướng dẫn thêm đường dẫn vào PATH:
-1. Trong thanh tìm kiếm tìm **Edit the system enviroment variables**
-    ![img.png](Tutorial%20Image%2Fimg.png)
-2. Chọn Environment Variables
+1. Trong thanh tìm kiếm tìm **Edit the system enviroment variables**  
+   ![img.png](Tutorial%20Image%2Fimg.png)
+
+2. Chọn Environment Variables  
    ![Enviroment Variables.PNG](Tutorial%20Image%2FEnviroment%20Variables.PNG)
-3. Chọn Path
+
+3. Chọn Path  
    ![Path.PNG](Tutorial%20Image%2FPath.PNG)
-4. Chọn New
+
+4. Chọn New  
    ![New.PNG](Tutorial%20Image%2FNew.PNG)
-5. Sau đó thêm đường dẫn tới thư mục có chứa 
+
+5. Sau đó thêm đường dẫn tới thư mục có chứa
 - File **bin** của toolchain
 - Bên trong file **bin** của GnuWin32
-- Bên trong file **bin** của mingw64
+- Bên trong file **bin** của mingw64  
   ![AddPath.PNG](Tutorial%20Image%2FAddPath.PNG)
+
 6. Kiểm tra lại
-- arm-none-eabi-gcc --version
+- arm-none-eabi-gcc --version  
   ![Arm_check.PNG](Tutorial%20Image%2FArm_check.PNG)
-- make --version
+- make --version  
   ![Make_check.PNG](Tutorial%20Image%2FMake_check.PNG)
-- gcc --version
+- gcc --version  
   ![Gcc_check.PNG](Tutorial%20Image%2FGcc_check.PNG)
 **Nếu kết quả hiển thị tương tự như trên tức là bạn đã thành công cài đặt môi trường**
 
