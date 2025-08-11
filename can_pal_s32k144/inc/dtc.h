@@ -1,7 +1,3 @@
-/*
- * @brief  Header file for the Diagnostic Trouble Code (DTC) management module.
- * This module handles setting, retrieving, and finding DTCs in NVM.
- */
 #ifndef INC_DTC_H_
 #define INC_DTC_H_
 
@@ -49,11 +45,6 @@ typedef struct __attribute__((packed))
     DTC_Snapshot_t snapshot;      /* The snapshot data captured when the fault occurred. */
 } DTC_Record_t;
 
-
-/**
- * @brief Initializes the DTC module.
- */
-void DTC_Init(void);
 
 /**
  * @brief Sets a new DTC or updates an existing one in NVM.

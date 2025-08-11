@@ -1,6 +1,4 @@
-/*
- * @brief  Implementation of the Diagnostic Trouble Code (DTC) management module.
- */
+
 #include "dtc.h"
 #include "nvm.h"
 #include <string.h> /* For memset and memcpy */
@@ -12,23 +10,23 @@
  */
 static uint8_t next_dtc_overwrite_index = 0;
 
-/*
- * @brief See dtc.h for function documentation.
- */
-void DTC_Init(void) {
-	/* NVM_Init() should be called before this. This function can be used later
-	   to check DTC data integrity on startup if needed. */
-}
-
-/*
- * @brief See dtc.h for function documentation.
+/**
+ * @brief Get the total number of DTC slots available.
+ *
+ * @return Number of slots available in NVM for DTC records.
  */
 uint8_t DTC_GetCount(void) {
 	return DTC_COUNT;
 }
 
-/*
- * @brief See dtc.h for function documentation.
+/**
+ * @brief Find the index of a DTC code in storage (3-byte UDS DTC match).
+ *
+ * Compares only the lower 24 bits (UDS 3-byte code). Reads each slot's
+ * first 4 bytes and reconstructs a 32-bit value to avoid unaligned access.
+ *
+ * @param dtc_code 32-bit value; only bits 23:0 are used for comparison.
+ * @return Index [0..DTC_COUNT-1] if found, else -1.
  */
 int8_t DTC_Find(uint32_t dtc_code) {
     /* UDS DTCs are 3 bytes long. This mask is used to ignore the most significant byte. */
@@ -57,8 +55,16 @@ int8_t DTC_Find(uint32_t dtc_code) {
     return -1; /* Not found. */
 }
 
-/*
- * @brief See dtc.h for function documentation.
+/**
+ * @brief Set or update a DTC record with status and optional snapshot.
+ *
+ * If the DTC already exists → update. Else use first empty (erased=0xFFFFFFFF)
+ * slot. If full, overwrite the oldest slot in a circular manner.
+ *
+ * @param dtc_code  UDS DTC (lower 24 bits significant).
+ * @param status    Status byte to store (UDS status mask).
+ * @param snapshot  Optional pointer to snapshot data; if NULL, snapshot is zeroed.
+ * @return true on successful write to NVM, false otherwise.
  */
 bool DTC_Set(uint32_t dtc_code, uint8_t status, const DTC_Snapshot_t *snapshot) {
 	DTC_Record_t new_record;
@@ -103,8 +109,14 @@ bool DTC_Set(uint32_t dtc_code, uint8_t status, const DTC_Snapshot_t *snapshot) 
 	return false;
 }
 
-/*
- * @brief See dtc.h for function documentation.
+/**
+ * @brief Read a DTC record by index into user buffer.
+ *
+ * Filters out erased (all 0xFF) or cleared (all zeros) records after read.
+ *
+ * @param index  Zero-based slot index in [0..DTC_COUNT-1].
+ * @param record Output pointer to receive the DTC record.
+ * @return true if a valid active DTC is returned, false otherwise.
  */
 bool DTC_GetRecord(uint8_t index, DTC_Record_t *record) {
 	if (record == NULL || index >= DTC_COUNT) {

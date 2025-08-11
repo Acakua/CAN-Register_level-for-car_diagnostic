@@ -12,11 +12,11 @@
 
 /* --- Configuration --- */
 #define NVM_START_ADDRESS   (0x14000000U) /* Standard start address for FlexNVM on S32K144 */
-#define NVM_SIZE            (4096U)     /* EEPROM size = 4 Kbytes, as per your spec */
-#define DID_COUNT           (2U)        /* Number of Data Identifiers supported */
-#define DTC_COUNT           (5U)        /* Number of Diagnostic Trouble Codes that can be stored */
-#define DID_MAX_SIZE        (8U)        /* Max size in bytes for a single DID record */
-#define DTC_SLOT_SIZE       (32U)       /* Reserved size in bytes for a single DTC record in NVM */
+#define NVM_SIZE            (4096U)       /* EEPROM size = 4 Kbytes, as per your spec */
+#define DID_COUNT           (2U)          /* Number of Data Identifiers supported */
+#define DTC_COUNT           (5U)          /* Number of Diagnostic Trouble Codes that can be stored */
+#define DID_MAX_SIZE        (8U)          /* Max size in bytes for a single DID record */
+#define DTC_SLOT_SIZE       (32U)         /* Reserved size in bytes for a single DTC record in NVM */
 
 /* --- NVM Memory Layout --- */
 /* Defines the memory map for different data regions within the NVM. */

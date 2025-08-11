@@ -21,8 +21,8 @@ void FLEXCAN0_init(void) {
     CAN0->RAMn[4*RX_MB_INDEX] = 0x04000000 | (8 << 16);  // Ready to receive, DLC=8
 
     CAN0->MCR = 0x0000001F;
-    while (CAN0->MCR & CAN_MCR_FRZACK_MASK) {}
-    while (CAN0->MCR & CAN_MCR_NOTRDY_MASK) {}
+    while (CAN0->MCR & CAN_MCR_FRZACK_MASK);
+    while (CAN0->MCR & CAN_MCR_NOTRDY_MASK);
 }
 
 void FLEXCAN0_transmit_msg(const CAN_Message_t *msg) {

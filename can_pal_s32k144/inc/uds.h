@@ -1,7 +1,4 @@
-/*
- * @brief  Header file for the Unified Diagnostic Services (UDS) handler.
- * This module focuses on handling Service 0x19: ReadDTCInformation.
- */
+
 #ifndef INC_UDS_H_
 #define INC_UDS_H_
 
@@ -63,6 +60,14 @@ void handleReadDTCInformation(const CAN_Message_t *requestMsg);
  */
 void UDS_SendResponse(void);
 
+/**
+ * @brief UDS service dispatcher (router).
+ *
+ * Routes an incoming UDS request (by Service ID at data[1]) to the proper
+ * handler and triggers response transmission.
+ *
+ * @param msg_rx Received CAN message carrying the UDS request.
+ */
 void UDS_DispatchService(const CAN_Message_t msg_rx);
 
 #endif /* INC_UDS_H_ */
