@@ -1,5 +1,6 @@
 #include "uds.h"
 #include "adc.h"
+#include "nvm.h"
 
 // ==== Global Variables ====
 // Current security level
@@ -283,11 +284,12 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
 
     // Step 8: NVM write
     bool writeSuccess = writeToNVM(did, newVal);
+
     if (!writeSuccess) {
         udsCtx.flow = UDS_FLOW_NEG;
         udsCtx.nrc = NRC_GENERAL_PROGRAMMING_FAILURE;
         return;
-    }
+    } else engineTemp = newVal;
 
     // Step 9: Positive response
     udsCtx.flow = UDS_FLOW_POS;
@@ -484,18 +486,45 @@ bool isConditionOk(uint16_t did) {
     return true;
 }
 
+
 /**
- * @brief Writes a value to NVM for a given DID.
+ * @brief Writes a value to NVM for a specific DID.
  *
- * @param did The DID to write.
- * @param value The value to store.
- * @return true if write succeeded, false otherwise.
+ * This function uses the memory layout defined in nvm.h to determine
+ * the correct address to write to. It supports writing various DID types and can be
+ * easily extended.
+ *
+ * @param did   The Data Identifier to be written.
+ * @param value The value to be stored.
+ * @return true on successful write, false on failure or if the DID is not supported.
  */
 bool writeToNVM(uint16_t did, uint16_t value) {
-    // Example: Simulate successful NVM write
-    return true;
-}
+    uint32_t offset;
 
+    // 1. Determine the correct NVM offset based on the DID.
+    switch (did) {
+        case DID_ENGINE_TEMP:
+            offset = DID_ENGINE_TEMP_NVM_OFFSET;
+            break;
+        // DID others
+
+        default:
+            // This DID is not supported for writing.
+            return false;
+    }
+
+    // 2. Prepare the 16-bit value as a 2-byte array for NVM writing.
+    uint8_t data_to_write[2];
+    data_to_write[0] = (uint8_t)(value >> 8);   // High Byte
+    data_to_write[1] = (uint8_t)(value & 0xFF); // Low Byte
+
+    // 3. Call the NVM driver to perform the write operation.
+    if (NVM_Write(offset, data_to_write, 2) == NVM_OK) {
+        return true; // Write successful!
+    } else {
+        return false; // NVM write failed.
+    }
+}
 
 /**
  * @brief Perform a system reset of the ECU via Cortex-M System Control Block.

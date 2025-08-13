@@ -15,14 +15,11 @@
 product: Clocks v13.0
 processor: S32K144
 package_id: S32K144_LQFP100
-mcu_data: s32sdk_s32k1xx_rtm_401
+mcu_data: s32sdk_s32k1xx_rtm_402
 processor_version: 0.0.0
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 
 #include "clock_config.h"
-#include "clock_manager.h"
-
-
 
 /*******************************************************************************
  * Definitions
@@ -57,13 +54,9 @@ outputs:
 - {id: FLEXCAN2_CLK.outFreq, value: 48 MHz}
 - {id: FTFC0_CLK.outFreq, value: 24 MHz}
 - {id: FTM0_CLK.outFreq, value: 8 MHz}
-- {id: FTM0_EXT_PIN_CLK.outFreq, value: 2 MHz}
 - {id: FTM1_CLK.outFreq, value: 8 MHz}
-- {id: FTM1_EXT_PIN_CLK.outFreq, value: 2 MHz}
 - {id: FTM2_CLK.outFreq, value: 8 MHz}
-- {id: FTM2_EXT_PIN_CLK.outFreq, value: 2 MHz}
 - {id: FTM3_CLK.outFreq, value: 8 MHz}
-- {id: FTM3_EXT_PIN_CLK.outFreq, value: 2 MHz}
 - {id: FlexIO0_CLK.outFreq, value: 8 MHz}
 - {id: LPI2C0_CLK.outFreq, value: 8 MHz}
 - {id: LPIT0_CLK.outFreq, value: 8 MHz}
@@ -86,7 +79,7 @@ outputs:
 - {id: PORTD_CLK.outFreq, value: 48 MHz}
 - {id: PORTE_CLK.outFreq, value: 48 MHz}
 - {id: RTC0_CLK.outFreq, value: 48 MHz}
-- {id: RTC_CLK.outFreq, value: 8 MHz}
+- {id: RTC_CLK.outFreq, value: 48 MHz}
 - {id: SCGCLKOUT.outFreq, value: 48 MHz}
 - {id: SIRCDIV1_CLK.outFreq, value: 8 MHz}
 - {id: SIRCDIV2_CLK.outFreq, value: 8 MHz}
@@ -96,7 +89,6 @@ outputs:
 - {id: SPLLDIV2_CLK.outFreq, value: 28 MHz}
 - {id: SPLL_CLK_OUT.outFreq, value: 112 MHz}
 - {id: SYS_CLK.outFreq, value: 48 MHz}
-- {id: TCLK_0_EXT_REF.outFreq, value: 2 MHz}
 - {id: TRACE_CLK.outFreq, value: 48 MHz}
 settings:
 - {id: 'HSRUN:SCG.DIVBUS.scale', value: '2', locked: true}
@@ -110,6 +102,7 @@ settings:
 - {id: PCC.PREDIV.scale, value: '1', locked: true}
 - {id: PCC.PREDIVTRACE.scale, value: '1', locked: true}
 - {id: PCC.TRACE_FRAC.scale, value: '1', locked: true}
+- {id: RTCCLKSEL.sel, value: SCG.FIRCDIV1_CLK}
 - {id: 'RUN:SCG.DIVBUS.scale', value: '1', locked: true}
 - {id: 'RUN:SCG.DIVCORE.scale', value: '1', locked: true}
 - {id: 'RUN:SCG.DIVSLOW.scale', value: '2', locked: true}
@@ -126,13 +119,10 @@ settings:
 - {id: SCG.SPLLDIV1.scale, value: '2', locked: true}
 - {id: SCG.SPLLDIV2.scale, value: '4', locked: true}
 - {id: SCG.SPLL_mul.scale, value: '28', locked: true}
-- {id: TCLKConfig, value: 'yes'}
 - {id: 'VLPR:SCG.DIVBUS.scale', value: '1', locked: true}
 - {id: 'VLPR:SCG.DIVCORE.scale', value: '2', locked: true}
 - {id: 'VLPR:SCG.DIVSLOW.scale', value: '4', locked: true}
 - {id: 'VLPR:SCG.SCSSEL.sel', value: SCG.SIRC}
-sources:
-- {id: external_clocks.tclk_0_ext_ref.outFreq, value: 2 MHz, enabled: true}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 
 /* *************************************************************************
@@ -428,14 +418,14 @@ clock_manager_user_config_t clockMan1_InitConfig0 = {
             .initialize = true,
             .rccrConfig =
             {
-                .src = SCG_SYSTEM_CLOCK_SRC_FIRC, /* Fast IRC */
+                .src = SCG_SYSTEM_CLOCK_SRC_FIRC,/* Fast FIRC */
                 .divCore = SCG_SYSTEM_CLOCK_DIV_BY_1,/* Core Clock Divider: divided by 1 */
                 .divBus = SCG_SYSTEM_CLOCK_DIV_BY_1,/* Bus Clock Divider: divided by 1 */
                 .divSlow = SCG_SYSTEM_CLOCK_DIV_BY_2,/* Slow Clock Divider: divided by 2 */
             },
             .vccrConfig =
             {
-                .src = SCG_SYSTEM_CLOCK_SRC_SIRC, /* Slow IRC */
+                .src = SCG_SYSTEM_CLOCK_SRC_SIRC,/* Slow SIRC */
                 .divCore = SCG_SYSTEM_CLOCK_DIV_BY_2,/* Core Clock Divider: divided by 2 */
                 .divBus = SCG_SYSTEM_CLOCK_DIV_BY_1,/* Bus Clock Divider: divided by 1 */
                 .divSlow = SCG_SYSTEM_CLOCK_DIV_BY_4,/* Slow Clock Divider: divided by 4 */
@@ -469,7 +459,7 @@ clock_manager_user_config_t clockMan1_InitConfig0 = {
             .enableLpo1k = true, /*!< LPO1KCLKEN    */
             .enableLpo32k = true, /*!< LPO32KCLKEN   */
             .sourceLpoClk = SIM_LPO_CLK_SEL_LPO_128K,/* 128 kHz LPO clock */
-            .sourceRtcClk = SIM_RTCCLK_SEL_SOSCDIV1_CLK,/* SOSCDIV1 clock */
+            .sourceRtcClk = SIM_RTCCLK_SEL_FIRCDIV1_CLK,/* FIRCDIV1 clock */
         },
         .platGateConfig =
         {
@@ -482,14 +472,7 @@ clock_manager_user_config_t clockMan1_InitConfig0 = {
         },
         .tclkConfig =
         {
-            .initialize = true, /*!< Initialize    */
-            .tclkFreq[0] = 2000000U, /*!< TCLK0         */
-            .tclkFreq[1] = 0U, /*!< TCLK1         */
-            .tclkFreq[2] = 0U, /*!< TCLK2         */
-            .extPinSrc[0] = 0U, /*!< FTM0 ext pin source   */
-            .extPinSrc[1] = 0U, /*!< FTM1 ext pin source   */
-            .extPinSrc[2] = 0U, /*!< FTM2 ext pin source   */
-            .extPinSrc[3] = 0U, /*!< FTM3 ext pin source   */
+            .initialize = false, /*!< Initialize    */
         },
         .traceClockConfig =
         {

@@ -18,10 +18,11 @@
 /* Include header files for all configured components */
 #include "clock_config.h"
 #include "pin_mux.h"
-#include "peripherals_can_pal1.h"
-#include "peripherals_osif1.h"
+#include "peripherals_osif_1.h"
 #include "peripherals_adc_config_1.h"
 #include "peripherals_adc_pal_1.h"
+#include "peripherals_can_pal_1.h"
+#include "peripherals_flash_1.h"
 
 
 #endif /* SDK_PROJECT_CONFIG_H_ */

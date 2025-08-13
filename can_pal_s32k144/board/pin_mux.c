@@ -5,17 +5,17 @@
 product: Pins v15.0
 processor: S32K144
 package_id: S32K144_LQFP100
-mcu_data: s32sdk_s32k1xx_rtm_401
+mcu_data: s32sdk_s32k1xx_rtm_402
 processor_version: 0.0.0
 pin_labels:
-- {pin_num: '9', pin_signal: PTE4, label: CAN_RX, identifier: CAN_RX}
-- {pin_num: '8', pin_signal: PTE5, label: CAN_TX, identifier: CAN_TX}
-- {pin_num: '22', pin_signal: PTD15, label: led0_evb, identifier: led0_evb}
-- {pin_num: '21', pin_signal: PTD16, label: led1_evb, identifier: led1_evb}
-- {pin_num: '40', pin_signal: PTC0, label: led0_mb, identifier: led0_mb}
-- {pin_num: '39', pin_signal: PTC1, label: led1_mb, identifier: led1_mb}
-- {pin_num: '50', pin_signal: PTC12, label: btn2, identifier: btn2}
-- {pin_num: '49', pin_signal: PTC13, label: btn1, identifier: btn1}
+- {pin_num: '74', pin_signal: PTB11, label: Button0, identifier: Button0}
+- {pin_num: '68', pin_signal: PTB12, label: Button1, identifier: Button1}
+- {pin_num: '40', pin_signal: PTC0, label: LED0, identifier: LED0}
+- {pin_num: '39', pin_signal: PTC1, label: LED0, identifier: LED1;LED0}
+- {pin_num: '54', pin_signal: PTB0, label: Button1, identifier: Button1}
+- {pin_num: '53', pin_signal: PTB1, label: Button2, identifier: Button2}
+- {pin_num: '30', pin_signal: PTC2, label: LED1, identifier: LED1}
+- {pin_num: '29', pin_signal: PTC3, label: LED2, identifier: LED2}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
@@ -47,49 +47,17 @@ BOARD_InitPins:
 - pin_list:
   - {pin_num: '9', peripheral: CAN0, signal: 'rxd, rxd', pin_signal: PTE4}
   - {pin_num: '8', peripheral: CAN0, signal: 'txd, txd', pin_signal: PTE5}
+  - {pin_num: '49', peripheral: PORTC, signal: 'port, 13', pin_signal: PTC13, direction: INPUT}
+  - {pin_num: '50', peripheral: PORTC, signal: 'port, 12', pin_signal: PTC12, direction: INPUT}
   - {pin_num: '22', peripheral: PORTD, signal: 'port, 15', pin_signal: PTD15, direction: OUTPUT}
   - {pin_num: '21', peripheral: PORTD, signal: 'port, 16', pin_signal: PTD16, direction: OUTPUT}
-  - {pin_num: '40', peripheral: PORTC, signal: 'port, 0', pin_signal: PTC0, direction: OUTPUT}
-  - {pin_num: '39', peripheral: PORTC, signal: 'port, 1', pin_signal: PTC1, direction: OUTPUT}
-  - {pin_num: '50', peripheral: PORTC, signal: 'port, 12', pin_signal: PTC12, direction: INPUT}
-  - {pin_num: '49', peripheral: PORTC, signal: 'port, 13', pin_signal: PTC13, direction: INPUT}
-  - {pin_num: '46', peripheral: ADC0, signal: 'se, 12', pin_signal: PTC14}
+  - {pin_num: '4', peripheral: PORTD, signal: 'port, 0', pin_signal: PTD0, direction: OUTPUT}
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS ***********
  */
 /* clang-format on */
 
 /* Generate array of configured pin structures */
 pin_settings_config_t g_pin_mux_InitConfigArr0[NUM_OF_CONFIGURED_PINS0] = {
-    {
-        .base            = PORTC,
-        .pinPortIdx      = 0U,
-        .pullConfig      = PORT_INTERNAL_PULL_NOT_ENABLED,
-        .driveSelect     = PORT_LOW_DRIVE_STRENGTH,
-        .passiveFilter   = false,
-        .mux             = PORT_MUX_AS_GPIO,
-        .pinLock         = false,
-        .intConfig       = PORT_DMA_INT_DISABLED,
-        .clearIntFlag    = false,
-        .gpioBase        = PTC,
-        .direction       = GPIO_OUTPUT_DIRECTION,
-        .digitalFilter   = false,
-        .initValue       = 0U,
-    },
-    {
-        .base            = PORTC,
-        .pinPortIdx      = 1U,
-        .pullConfig      = PORT_INTERNAL_PULL_NOT_ENABLED,
-        .driveSelect     = PORT_LOW_DRIVE_STRENGTH,
-        .passiveFilter   = false,
-        .mux             = PORT_MUX_AS_GPIO,
-        .pinLock         = false,
-        .intConfig       = PORT_DMA_INT_DISABLED,
-        .clearIntFlag    = false,
-        .gpioBase        = PTC,
-        .direction       = GPIO_OUTPUT_DIRECTION,
-        .digitalFilter   = false,
-        .initValue       = 0U,
-    },
     {
         .base            = PORTC,
         .pinPortIdx      = 12U,
@@ -121,17 +89,19 @@ pin_settings_config_t g_pin_mux_InitConfigArr0[NUM_OF_CONFIGURED_PINS0] = {
         .initValue       = 0U,
     },
     {
-        .base            = PORTC,
-        .pinPortIdx      = 14U,
+        .base            = PORTD,
+        .pinPortIdx      = 0U,
         .pullConfig      = PORT_INTERNAL_PULL_NOT_ENABLED,
         .driveSelect     = PORT_LOW_DRIVE_STRENGTH,
         .passiveFilter   = false,
-        .mux             = PORT_PIN_DISABLED,
+        .mux             = PORT_MUX_AS_GPIO,
         .pinLock         = false,
         .intConfig       = PORT_DMA_INT_DISABLED,
         .clearIntFlag    = false,
-        .gpioBase        = NULL,
+        .gpioBase        = PTD,
+        .direction       = GPIO_OUTPUT_DIRECTION,
         .digitalFilter   = false,
+        .initValue       = 0U,
     },
     {
         .base            = PORTD,
