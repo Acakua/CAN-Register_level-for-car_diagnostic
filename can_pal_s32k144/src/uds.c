@@ -302,25 +302,6 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
 }
 
 /**
- * @brief Handles ReadDataByIdentifier (SID = 0x22).
- *
- * Reads the value of a supported DID and sends it back in the response.
- * Validates message length, DID support, security access, and read conditions.
- *
- * @param msg_rx Incoming CAN message:
- *               [len, 0x22, DID_H, DID_L]
- *
- * Steps:
- * 1) Length check (len == DLC - 1).
- * 2) Require DLC ≥ 4. (min 1 DID)
- * 3) DID support check (only DID_ENGINE_TEMP allowed).
- * 4) Security access validation.
- * 5) Condition validation.
- * 6) Prepare POS response [0x05, 0x62, DID high, DID low, Value high, Value low].
- */
-
-
-/**
  * @brief Handle "Read Data By Identifier" (UDS SID = 0x22) requests.
  *
  * Parses one or more DIDs from the incoming CAN frame, validates them,
