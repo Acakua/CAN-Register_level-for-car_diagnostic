@@ -1,3 +1,4 @@
+
 #include "dtc.h"
 #include "nvm.h"
 #include <string.h> /* For memset and memcpy */
@@ -26,6 +27,15 @@ uint8_t DTC_GetCount(void) {
  *
  * @param dtc_code 32-bit value; only bits 23:0 are used for comparison.
  * @return Index [0..DTC_COUNT-1] if found, else -1.
+ * 
+ * Processing logic:
+ * 1) Define mask 0x00FFFFFF to compare only the 3 UDS bytes.
+ * 2) For i = 0..DTC_COUNT-1:
+ *    2.1) Compute slot offset = DTC_REGION_OFFSET + i * DTC_SLOT_SIZE.
+ *    2.2) NVM_Read(offset, 4 bytes → temp_buffer); if fail, continue next slot.
+ *    2.3) Rebuild stored_dtc_code from temp_buffer[0..3] (avoid unaligned access).
+ *    2.4) If (stored_dtc_code & mask) == (dtc_code & mask) → return i.
+ * 3) If none matched, return -1 (not found).
  */
 int8_t DTC_Find(uint32_t dtc_code) {
     /* UDS DTCs are 3 bytes long. This mask is used to ignore the most significant byte. */
@@ -64,6 +74,22 @@ int8_t DTC_Find(uint32_t dtc_code) {
  * @param status    Status byte to store (UDS status mask).
  * @param snapshot  Optional pointer to snapshot data; if NULL, snapshot is zeroed.
  * @return true on successful write to NVM, false otherwise.
+ * 
+ *  * Processing logic:
+ * 1) Build DTC_Record_t new_record:
+ *    - new_record.dtc_code   = dtc_code
+ *    - new_record.status_mask= status
+ *    - new_record.snapshot   = *snapshot if not NULL, else zeroed.
+ * 2) Locate target index:
+ *    2.1) Try DTC_Find(dtc_code) → update in-place if found.
+ *    2.2) If not found, try DTC_Find(0xFFFFFFFF) → first erased/empty slot.
+ *    2.3) If still not found, pick index = next_dtc_overwrite_index (FIFO)
+ *         and advance next_dtc_overwrite_index with wrap-around.
+ * 3) If index is valid:
+ *    - Compute offset = DTC_REGION_OFFSET + index * DTC_SLOT_SIZE.
+ *    - NVM_Write(offset, &new_record, sizeof(DTC_Record_t)).
+ *    - If write OK → return true; else return false.
+ * 4) If no valid index or write failed → return false.
  */
 bool DTC_Set(uint32_t dtc_code, uint8_t status, const DTC_Snapshot_t *snapshot) {
 	DTC_Record_t new_record;
@@ -116,6 +142,15 @@ bool DTC_Set(uint32_t dtc_code, uint8_t status, const DTC_Snapshot_t *snapshot) 
  * @param index  Zero-based slot index in [0..DTC_COUNT-1].
  * @param record Output pointer to receive the DTC record.
  * @return true if a valid active DTC is returned, false otherwise.
+ * 
+ * Processing logic:
+ * 1) Validate arguments: record != NULL and index < DTC_COUNT; else return false.
+ * 2) Compute offset = DTC_REGION_OFFSET + index * DTC_SLOT_SIZE.
+ * 3) NVM_Read(offset, record, sizeof(DTC_Record_t)); if read fails → return false.
+ * 4) Validate content:
+ *    - If record->dtc_code == 0xFFFFFFFF (erased) or == 0x00000000 (cleared)
+ *      → return false.
+ *    - Otherwise → return true (slot contains a valid, active DTC).
  */
 bool DTC_GetRecord(uint8_t index, DTC_Record_t *record) {
 	if (record == NULL || index >= DTC_COUNT) {
