@@ -27,8 +27,6 @@ typedef struct {
 /* Global context for the UDS service handler */
 static UDS_Context udsCtx;
 
-/* --- START OF ISO-TP AND RESPONSE SENDING LOGIC --- */
-
 /**
  * @brief Simple blocking delay function.
  * @note This is a crude delay. For production, a hardware timer is recommended.
@@ -72,8 +70,10 @@ static void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
 
 	/* --- Step 1: Send the First Frame (FF) --- */
     /* The FF contains control information and the first 6 bytes of data. */
-	msg.data[0] = ISO_TP_PCI_TYPE_FIRST_FRAME | (uint8_t) (length >> 8); /* PCI: Type + Upper 4 bits of length */
-	msg.data[1] = (uint8_t) (length & 0xFF);                           /* Lower 8 bits of length */
+    /* PCI: Type + Upper 4 bits of length */
+	msg.data[0] = ISO_TP_PCI_TYPE_FIRST_FRAME | (uint8_t) (length >> 8); 
+    /* Lower 8 bits of length */
+	msg.data[1] = (uint8_t) (length & 0xFF);                          
 	memcpy(&msg.data[2], &data[bytes_sent], 6);
 	FLEXCAN0_transmit_msg(&msg);
 	bytes_sent += 6;
