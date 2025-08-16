@@ -1,6 +1,3 @@
-/*
- * @brief  Implementation of the NVM abstraction layer for S32K144.
- */
 #include "nvm.h"
 #include <string.h>
 
