@@ -8,7 +8,8 @@ BUILD_DIR   := build
 CC       := arm-none-eabi-gcc
 OBJCOPY  := arm-none-eabi-objcopy
 SIZE     := arm-none-eabi-size
-MAKE     := "C:/Program Files (x86)/GnuWin32/bin/make"  # MAKE với path có dấu cách
+MAKE := make
+
 
 # ==========================
 # Include submodules
