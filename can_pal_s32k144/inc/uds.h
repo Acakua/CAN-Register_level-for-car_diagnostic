@@ -1,4 +1,3 @@
-
 #ifndef INC_UDS_H_
 #define INC_UDS_H_
 
@@ -6,7 +5,7 @@
 #include <stdbool.h>
 #include "FlexCan.h"
 
-// ===== UDS Service IDs =====
+/* ===== UDS Service IDs ===== */
 #define UDS_SERVICE_ECU_RESET                0x11
 #define UDS_SERVICE_READ_DID                 0x22
 #define UDS_SERVICE_WRITE_DID                0x2E
@@ -18,7 +17,7 @@
 #define SF_REPORT_DTC_SNAPSHOT_RECORD_BY_DTC_NUMBER     (0x04)
 #define SF_REPORT_SUPPORTED_DTC                         (0x0A)
 
-// ===== NRC (Negative Response Codes) =====
+/* === NRC (Negative Response Codes) ===== */
 #define NRC_SERVICE_NOT_SUPPORTED        0x11
 #define NRC_SUBFUNC_NOT_SUPPORTED        0x12
 #define NRC_INCORRECT_LENGTH             0x13
@@ -35,12 +34,12 @@
 #define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
 #define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
 
-// ===== DIDs =====
+/* ===== DIDs ===== */
 #define DID_ENGINE_TEMP      0xF190
 #define DID_ENGINE_LIGHT     0xF191
 #define DID_THRESHOLD        0xF192
 
-// ===== Security Levels =====
+/* ===== Security Levels ===== */
 #define SECURITY_LEVEL_NONE     0
 #define SECURITY_LEVEL_ENGINE   1
 
