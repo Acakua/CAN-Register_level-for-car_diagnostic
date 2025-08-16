@@ -1,8 +1,3 @@
-/*
- * @brief  Header file for the Non-Volatile Memory (NVM) abstraction layer.
- * This module provides a simple interface for reading from and writing to
- * the S32K144's emulated EEPROM over FlexNVM.
- */
 #ifndef INC_NVM_H_
 #define INC_NVM_H_
 
