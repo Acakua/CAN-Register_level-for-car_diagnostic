@@ -56,10 +56,10 @@ static UDS_Context udsCtx;
  * 1) Extract SID = msg_rx.data[1].
  * 2) Reset udsCtx: flow=NONE, sid=SID, nrc=0.
  * 3) Switch on SID:
- *    - 0x11 (ECU Reset)        → handleECUReset()
- *    - 0x2E (Write DID)        → handleWriteDataByIdentifier()
- *    - 0x22 (Read DID)         → handleReadDataByIdentifier()
- *    - default                 → flow=NEG, nrc=NRC_SERVICE_NOT_SUPPORTED
+ *    - 0x11 (ECU Reset)        -> handleECUReset()
+ *    - 0x2E (Write DID)        -> handleWriteDataByIdentifier()
+ *    - 0x22 (Read DID)         -> handleReadDataByIdentifier()
+ *    - default                 -> flow=NEG, nrc=NRC_SERVICE_NOT_SUPPORTED
  * 4) Call UDS_SendResponse().
  *
  * Context:
@@ -101,9 +101,9 @@ void UDS_DispatchService(const CAN_Message_t msg_rx) {
 /**
  * @brief Transmits a UDS response according to udsCtx state.
  *
- * If udsCtx.flow == POS → send udsCtx.msg as-is.
- * If udsCtx.flow == NEG → construct and send a Negative Response [0x7F, SID, NRC].
- * If udsCtx.flow == NONE → send nothing.
+ * If udsCtx.flow == POS -> send udsCtx.msg as-is.
+ * If udsCtx.flow == NEG -> construct and send a Negative Response [0x7F, SID, NRC].
+ * If udsCtx.flow == NONE -> send nothing.
  *
  * Special case: If POS response for ECU Reset is sent, trigger ECU reset after TX.
  */
@@ -122,7 +122,7 @@ void UDS_SendResponse(void) {
         rsp.data[2] = udsCtx.sid;     // Original SID
         rsp.data[3] = udsCtx.nrc;     // Negative Response Code
     } else {
-        return; // NONE → nothing to send
+        return; // NONE -> nothing to send
     }
 
     // Send via CAN
@@ -138,18 +138,18 @@ void UDS_SendResponse(void) {
  * @brief Handles UDS ECU Reset (SID = 0x11).
  *
  * Validates request format, supported sub-function, conditions, and security.
- * If sub-function bit 7 is clear → send positive response first.
- * If bit 7 is set → perform reset immediately without response.
+ * If sub-function bit 7 is clear -> send positive response first.
+ * If bit 7 is set -> perform reset immediately without response.
  *
  * @param msg_rx Incoming CAN message: [len, 0x11, sub-function]
  *
  * Steps:
  * 1) Verify length byte matches DLC - 1.
- * 2) Require DLC ≥ 3 bytes (len, SID, sub-function).
+ * 2) Require DLC >= 3 bytes (len, SID, sub-function).
  * 3) Check sub-function = 0x01 (hard reset) only.
  * 4) Validate reset conditions and security access.
- * 5) If sub-function bit7=0 → prepare POS response [0x02 , 0x51, sub-function].
- *    If bit7=1 → trigger immediate reset without response.
+ * 5) If sub-function bit7=0 -> prepare POS response [0x02 , 0x51, sub-function].
+ *    If bit7=1 -> trigger immediate reset without response.
  */
 void handleECUReset(const CAN_Message_t msg_rx) {
     // Step 1: Length byte check
@@ -219,7 +219,7 @@ void handleECUReset(const CAN_Message_t msg_rx) {
  *
  * Steps:
  * 1) Length check (len == DLC - 1).
- * 2) Require DLC ≥ 5.  (1 byte len, 1 byte SID, 2 bytes DID, at least 1 byte data)
+ * 2) Require DLC >= 5.  (1 byte len, 1 byte SID, 2 bytes DID, at least 1 byte data)
  * 3) DID support check (only DID_THRESHOLD allowed).
  * 4) Data length check (max 2 bytes data for DID_THRESHOLD).
  * 5) Security access validation.
@@ -302,25 +302,6 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
 }
 
 /**
- * @brief Handles ReadDataByIdentifier (SID = 0x22).
- *
- * Reads the value of a supported DID and sends it back in the response.
- * Validates message length, DID support, security access, and read conditions.
- *
- * @param msg_rx Incoming CAN message:
- *               [len, 0x22, DID_H, DID_L]
- *
- * Steps:
- * 1) Length check (len == DLC - 1).
- * 2) Require DLC ≥ 4. (min 1 DID)
- * 3) DID support check (only DID_ENGINE_TEMP allowed).
- * 4) Security access validation.
- * 5) Condition validation.
- * 6) Prepare POS response [0x05, 0x62, DID high, DID low, Value high, Value low].
- */
-
-
-/**
  * @brief Handle "Read Data By Identifier" (UDS SID = 0x22) requests.
  *
  * Parses one or more DIDs from the incoming CAN frame, validates them,
@@ -336,7 +317,7 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
  *
  * Processing logic:
  * 1) Check data[0] matches DLC - 1.
- * 2) Ensure DLC ≥ 4 and that parameter bytes form complete DID pairs.
+ * 2) Ensure DLC >= 4 and that parameter bytes form complete DID pairs.
  * 3) Initialize response:
  *    - Set udsCtx.msg.canID = 0x768 (response CAN ID)
  *    - Set udsCtx.msg.data[1] = 0x62 (positive response SID = 0x22 + 0x40)
@@ -346,9 +327,9 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
  *    - Check security access via isSecurityAccessGranted().
  *    - Check environmental/operational conditions via isConditionOk().
  *    - Read the DID value:
- *         • DID_ENGINE_TEMP → myADC_Read(13)
- *         • DID_ENGINE_LIGHT → myADC_Read(12)
- *         • DID_THRESHOLD → use engineTemp variable
+ *         • DID_ENGINE_TEMP -> myADC_Read(13)
+ *         • DID_ENGINE_LIGHT -> myADC_Read(12)
+ *         • DID_THRESHOLD -> use engineTemp variable
  *    - Append DID_H, DID_L, val_H, val_L to udsCtx.msg.data[]
  *    - Increment validCount
  * 5) If no valid DID found (validCount == 0), respond NEG: NRC_REQUEST_OUT_OF_RANGE.
@@ -368,7 +349,7 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
         return;
     }
 
-    // Step 2: Check minimum length (≥ 4) and even parameter count (DID pairs)
+    // Step 2: Check minimum length (>= 4) and even parameter count (DID pairs)
     if (msg_rx.dlc < 4 || ((msg_rx.dlc) % 2) != 0) {
         udsCtx.flow = UDS_FLOW_NEG;
         udsCtx.nrc = NRC_INCORRECT_LENGTH;
@@ -429,7 +410,7 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
         }
     }
 
-    // Step 5: No valid DID found → NEG response
+    // Step 5: No valid DID found -> NEG response
     if (validCount == 0) {
         udsCtx.flow = UDS_FLOW_NEG;
         udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
@@ -503,7 +484,7 @@ bool writeToNVM(uint16_t did, uint16_t value) {
 
     // 1. Determine the correct NVM offset based on the DID.
     switch (did) {
-        case DID_ENGINE_TEMP:
+        case DID_THRESHOLD:
             offset = DID_ENGINE_TEMP_NVM_OFFSET;
             break;
         // DID others

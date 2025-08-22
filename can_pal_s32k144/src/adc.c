@@ -12,7 +12,7 @@
  * 1) Enable clock for PORTC and ADC0 modules via PCC.
  * 2) Configure PORTC14 and PORTC15:
  *    - Clear MUX bits
- *    - Set MUX = 0 → analog input function
+ *    - Set MUX = 0 -> analog input function
  * 3) Start ADC calibration by setting ADC0->SC3[CAL] bit and wait until it clears.
  * 4) Disable ADC channel by setting ADC0->SC1[0] = ADCH(31) (module idle).
  * 5) Configure ADC0->CFG1:
@@ -59,8 +59,8 @@ void myADC_Init(void)
  * Starts a conversion on the given ADC0 channel and blocks until the result
  * is ready, then returns the raw 12-bit conversion value.
  *
- * @param channel ADC channel number (0–31 depending on MCU pin mapping).
- * @return uint16_t Raw ADC conversion result (0–4095 for 12-bit mode).
+ * @param channel ADC channel number (0-31 depending on MCU pin mapping).
+ * @return uint16_t Raw ADC conversion result (0-4095 for 12-bit mode).
  *
  * Processing logic:
  * 1) Write channel number to ADC0->SC1[0] to start conversion.

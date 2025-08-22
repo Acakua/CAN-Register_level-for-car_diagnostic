@@ -70,7 +70,7 @@ void FLEXCAN0_init(void) {
  *
  * @param msg Pointer to CAN_Message_t containing:
  *            - canID: Standard ID (11-bit)
- *            - dlc:   Data length code (0–8)
+ *            - dlc:   Data length code (0-8)
  *            - data[]: Payload bytes
  *
  * Processing logic:
