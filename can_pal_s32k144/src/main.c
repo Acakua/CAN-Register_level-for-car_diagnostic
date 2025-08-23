@@ -7,13 +7,36 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
+#include <SendData.h>
 #include "adc.h"
+#include "motor.h"
+#include "MatrixLed.h"
+
+/* Thresholds */
+#define TEMP_LOW_THRESHOLD      1500
+#define TEMP_HIGH_THRESHOLD     2500
+
+#define LIGHT_LOW_THRESHOLD     1200
+#define LIGHT_HIGH_THRESHOLD    2800
+
+/* Matrix LED patterns */
+uint8_t full_on_pattern[8] = {
+    0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF
+};
+
+uint8_t half_on_pattern[8] = {
+    0xFF,0xFF,0x00,0x00,0x00,0x00,0xFF,0xFF
+};
+
+uint8_t all_off_pattern[8] = {
+    0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+};
+
 
 status_t status;
 
 flash_ssd_config_t flashSSDConfig;
 
-volatile int exit_code = 0;
 
 void BoardInit(void)
 {
@@ -21,6 +44,11 @@ void BoardInit(void)
     PINS_DRV_Init(NUM_OF_CONFIGURED_PINS0, g_pin_mux_InitConfigArr0);
 
     myADC_Init();
+    FLEXCAN0_init();
+    Motor_Init();
+	MatrixLed_Init();
+	myADC_Init();
+	//CAN_SENDER_Init();   /* Timer interrupt handles periodic CAN sending */
 
 	/* Initialize the Flash driver for NVM operations. */
 	status = FLASH_DRV_Init(&Flash_InitConfig0, &flashSSDConfig);
@@ -44,17 +72,58 @@ void BoardInit(void)
 	DEV_ASSERT(status == STATUS_SUCCESS);
 }
 
+
 int main(void)
 {
-    BoardInit();
-    FLEXCAN0_init();
-
+    uint16_t temperature = 0;
+    uint16_t light_level = 0;
     CAN_Message_t msg_rx;
+
+    /* Initialize peripherals */
+    BoardInit();
+
     while (1)
     {
+        /* Read ADC channels */
+        temperature = myADC_Read(13);  /* Temperature sensor */
+        light_level = myADC_Read(12);  /* Light sensor */
+
+        /* ----------- Motor Control ----------- */
+        if (temperature < TEMP_LOW_THRESHOLD)
+        {
+            Motor_SetDirection(MOTOR_FORWARD);
+            Motor_SetSpeed(700);
+        }
+        else if (temperature > TEMP_HIGH_THRESHOLD)
+        {
+            Motor_SetDirection(MOTOR_REVERSE);
+            Motor_SetSpeed(700);
+        }
+        else
+        {
+            Motor_SetDirection(MOTOR_STOP);
+            Motor_SetSpeed(0);
+        }
+
+        /* ----------- Matrix LED Control ----------- */
+        if (light_level < LIGHT_LOW_THRESHOLD)
+        {
+            MatrixLed_DisplayMatrix(full_on_pattern);  /* All LEDs ON */
+        }
+        else if (light_level > LIGHT_HIGH_THRESHOLD)
+        {
+            MatrixLed_DisplayMatrix(all_off_pattern);  /* All LEDs OFF */
+        }
+        else
+        {
+            MatrixLed_DisplayMatrix(half_on_pattern);  /* Half LEDs ON */
+        }
+
+
         if (FLEXCAN0_receive_msg(&msg_rx, RX_MSG_ID_UDS)) {
-            UDS_DispatchService(msg_rx);
+        	UDS_DispatchService(msg_rx);
         }
     }
-    return exit_code;
+
+    return 0;
 }

@@ -484,7 +484,7 @@ bool writeToNVM(uint16_t did, uint16_t value) {
 
     // 1. Determine the correct NVM offset based on the DID.
     switch (did) {
-        case DID_ENGINE_TEMP:
+        case DID_THRESHOLD:
             offset = DID_ENGINE_TEMP_NVM_OFFSET;
             break;
         // DID others

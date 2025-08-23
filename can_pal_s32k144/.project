@@ -226,6 +226,16 @@
 			<locationURI>S32SDK_S32K1XX_RTM_4.0.2/platform/drivers/src/interrupt/doxygen/interrupt.dox</locationURI>
 		</link>
 		<link>
+			<name>doc/SDK/platform/drivers/src/lpit/doxygen/lpit.dox</name>
+			<type>1</type>
+			<locationURI>S32SDK_S32K1XX_RTM_4.0.2/platform/drivers/src/lpit/doxygen/lpit.dox</locationURI>
+		</link>
+		<link>
+			<name>doc/SDK/platform/drivers/src/lpit/doxygen/lpit_driver.dox</name>
+			<type>1</type>
+			<locationURI>S32SDK_S32K1XX_RTM_4.0.2/platform/drivers/src/lpit/doxygen/lpit_driver.dox</locationURI>
+		</link>
+		<link>
 			<name>doc/SDK/platform/drivers/src/pdb/doxygen/pdb.dox</name>
 			<type>1</type>
 			<locationURI>S32SDK_S32K1XX_RTM_4.0.2/platform/drivers/src/pdb/doxygen/pdb.dox</locationURI>

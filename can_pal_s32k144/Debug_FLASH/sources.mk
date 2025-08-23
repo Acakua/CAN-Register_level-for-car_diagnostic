@@ -30,6 +30,7 @@ SDK/platform/drivers/src/edma \
 SDK/platform/drivers/src/flash \
 SDK/platform/drivers/src/flexcan \
 SDK/platform/drivers/src/interrupt \
+SDK/platform/drivers/src/lpit \
 SDK/platform/drivers/src/pdb \
 SDK/platform/drivers/src/pins \
 SDK/platform/drivers/src/trgmux \

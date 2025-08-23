@@ -34,6 +34,10 @@
                <pin_label pin_num="30" pin_signal="PTC2" label="LED1" identifier="LED1"/>
                <pin_label pin_num="29" pin_signal="PTC3" label="LED2" identifier="LED2"/>
             </pin_labels>
+            <external_user_signals>
+               <routingDetailsColumns/>
+               <properties/>
+            </external_user_signals>
             <power_domains/>
          </pins_profile>
          <functions_list>
@@ -262,16 +266,6 @@
       </gtm>
       <periphs name="Peripherals" version="14.0" enabled="true" update_project_code="true">
          <dependencies>
-            <dependency resourceType="SWComponent" resourceId="platform.driver.osif" description="OSIF driver is not found in the toolchain/IDE project. The project will not compile!" problem_level="2" source="Peripherals">
-               <feature name="enabled" evaluation="equal">
-                  <data type="Boolean">true</data>
-               </feature>
-            </dependency>
-            <dependency resourceType="SWComponent" resourceId="platform.driver.osif" description="An unsupported version of the OSIF driver in the toolchain/IDE project. Required: ${required_value}, actual: ${actual_value}. The project might not compile correctly." problem_level="1" source="Peripherals">
-               <feature name="version" evaluation="equivalent">
-                  <data type="Version">1.0.0</data>
-               </feature>
-            </dependency>
             <dependency resourceType="SWComponent" resourceId="platform.driver.adc" description="ADC driver is not found in the toolchain/IDE project. The project will not compile!" problem_level="2" source="Peripherals">
                <feature name="enabled" evaluation="equal">
                   <data type="Boolean">true</data>
@@ -312,6 +306,26 @@
                   <data type="Version">1.0.0</data>
                </feature>
             </dependency>
+            <dependency resourceType="SWComponent" resourceId="platform.driver.osif" description="OSIF driver is not found in the toolchain/IDE project. The project will not compile!" problem_level="2" source="Peripherals">
+               <feature name="enabled" evaluation="equal">
+                  <data type="Boolean">true</data>
+               </feature>
+            </dependency>
+            <dependency resourceType="SWComponent" resourceId="platform.driver.osif" description="An unsupported version of the OSIF driver in the toolchain/IDE project. Required: ${required_value}, actual: ${actual_value}. The project might not compile correctly." problem_level="1" source="Peripherals">
+               <feature name="version" evaluation="equivalent">
+                  <data type="Version">1.0.0</data>
+               </feature>
+            </dependency>
+            <dependency resourceType="SWComponent" resourceId="platform.driver.lpit" description="LPIT Driver is not found in the toolchain/IDE project. The project will not compile!" problem_level="2" source="Peripherals">
+               <feature name="enabled" evaluation="equal">
+                  <data type="Boolean">true</data>
+               </feature>
+            </dependency>
+            <dependency resourceType="SWComponent" resourceId="platform.driver.lpit" description="An unsupported version of the LPIT Driver in the toolchain/IDE project. Required: ${required_value}, actual: ${actual_value}. The project might not compile correctly." problem_level="1" source="Peripherals">
+               <feature name="version" evaluation="equivalent">
+                  <data type="Version">1.0.0</data>
+               </feature>
+            </dependency>
             <dependency resourceType="Tool" resourceId="Clocks" description="The Clocks tool is required by the Peripherals tool, but it is disabled." problem_level="2" source="Peripherals">
                <feature name="enabled" evaluation="equal">
                   <data>true</data>
@@ -329,6 +343,8 @@
             <file path="board/peripherals_can_pal_1.h" update_enabled="true"/>
             <file path="board/peripherals_flash_1.c" update_enabled="true"/>
             <file path="board/peripherals_flash_1.h" update_enabled="true"/>
+            <file path="board/peripherals_lpit_config_1.c" update_enabled="true"/>
+            <file path="board/peripherals_lpit_config_1.h" update_enabled="true"/>
             <file path="board/peripherals_osif_1.c" update_enabled="true"/>
             <file path="board/peripherals_osif_1.h" update_enabled="true"/>
             <file path="board/sdk_project_config.h" update_enabled="true"/>
@@ -342,9 +358,6 @@
                <options/>
                <dependencies/>
                <instances>
-                  <instance name="osif_1" uuid="6f0e8b2b-f8b9-4ce4-a844-b8ba08025c8e" type="osif" type_id="osif" mode="general" enabled="true" comment="" custom_name_enabled="false" editing_lock="false">
-                     <config_set name="osif"/>
-                  </instance>
                   <instance name="adc_config_1" uuid="190ff8cb-0ac3-462c-932d-08e3bee26280" type="adc_config" type_id="adc" mode="general" peripheral="ADC_0" enabled="true" comment="" custom_name_enabled="false" editing_lock="false">
                      <config_set name="adc" quick_selection="dv_adc">
                         <array name="adcConverterCfg">
@@ -455,6 +468,34 @@
                               <setting name="DFlashBase" value="0x10000000"/>
                               <setting name="EERAMBase" value="0x14000000"/>
                               <setting name="CallBack" value="NULL_CALLBACK"/>
+                           </struct>
+                        </array>
+                     </config_set>
+                  </instance>
+                  <instance name="osif_1" uuid="f2d90d1b-f5a8-417d-a216-e0693827562f" type="osif" type_id="osif" mode="general" enabled="true" comment="" custom_name_enabled="false" editing_lock="false">
+                     <config_set name="osif"/>
+                  </instance>
+                  <instance name="lpit_config_1" uuid="28775d0e-2933-4aff-9af7-f73653cb0742" type="lpit_config" type_id="lpit" mode="general" peripheral="LPIT_0" enabled="true" comment="" custom_name_enabled="false" editing_lock="false">
+                     <config_set name="lpit">
+                        <struct name="lpitConfig">
+                           <setting name="name" value="lpit1_InitConfig"/>
+                           <setting name="enableRunInDebug" value="true"/>
+                           <setting name="enableRunInDoze" value="false"/>
+                        </struct>
+                        <array name="lpitChannelConfig">
+                           <struct name="0">
+                              <setting name="name" value="lpit1_ChnConfig0"/>
+                              <setting name="cfgReadOnly" value="false"/>
+                              <setting name="timerMode" value="LPIT_PERIODIC_COUNTER"/>
+                              <setting name="periodUnits" value="LPIT_PERIOD_UNITS_MICROSECONDS"/>
+                              <setting name="period" value="1000000"/>
+                              <setting name="triggerSource" value="LPIT_TRIGGER_SOURCE_INTERNAL"/>
+                              <setting name="triggerSelect" value="0U"/>
+                              <setting name="enableReloadOnTrigger" value="false"/>
+                              <setting name="enableStopOnInterrupt" value="false"/>
+                              <setting name="enableStartOnTrigger" value="false"/>
+                              <setting name="chainChannel" value="false"/>
+                              <setting name="isInterruptEnabled" value="true"/>
                            </struct>
                         </array>
                      </config_set>

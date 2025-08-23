@@ -9,6 +9,7 @@ C_SRCS += \
 ../board/peripherals_adc_pal_1.c \
 ../board/peripherals_can_pal_1.c \
 ../board/peripherals_flash_1.c \
+../board/peripherals_lpit_config_1.c \
 ../board/peripherals_osif_1.c \
 ../board/pin_mux.c 
 
@@ -18,6 +19,7 @@ OBJS += \
 ./board/peripherals_adc_pal_1.o \
 ./board/peripherals_can_pal_1.o \
 ./board/peripherals_flash_1.o \
+./board/peripherals_lpit_config_1.o \
 ./board/peripherals_osif_1.o \
 ./board/pin_mux.o 
 
@@ -27,6 +29,7 @@ C_DEPS += \
 ./board/peripherals_adc_pal_1.d \
 ./board/peripherals_can_pal_1.d \
 ./board/peripherals_flash_1.d \
+./board/peripherals_lpit_config_1.d \
 ./board/peripherals_osif_1.d \
 ./board/pin_mux.d 
 

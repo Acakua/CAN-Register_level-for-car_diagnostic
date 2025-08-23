@@ -16,6 +16,7 @@ RM := rm -rf
 -include SDK/platform/drivers/src/trgmux/subdir.mk
 -include SDK/platform/drivers/src/pins/subdir.mk
 -include SDK/platform/drivers/src/pdb/subdir.mk
+-include SDK/platform/drivers/src/lpit/subdir.mk
 -include SDK/platform/drivers/src/interrupt/subdir.mk
 -include SDK/platform/drivers/src/flexcan/subdir.mk
 -include SDK/platform/drivers/src/flash/subdir.mk
@@ -46,7 +47,7 @@ flexcan_encrypted_s32k144.siz \
 all: flexcan_encrypted_s32k144.elf secondary-outputs
 
 # Tool invocations
-flexcan_encrypted_s32k144.elf: $(OBJS) C:\NXP\S32DS.3.5\S32DS\software\S32SDK_S32K1XX_RTM_4.0.2\platform\devices\S32K144\linker\gcc\S32K144_64_flash.ld $(USER_OBJS)
+flexcan_encrypted_s32k144.elf: $(OBJS) E:\S32\S32DS\software\S32SDK_S32K1XX_RTM_4.0.2\platform\devices\S32K144\linker\gcc\S32K144_64_flash.ld $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Standard S32DS C Linker'
 	arm-none-eabi-gcc -o "flexcan_encrypted_s32k144.elf" "@flexcan_encrypted_s32k144.args"  $(USER_OBJS) $(LIBS)

@@ -4,7 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.2/rtos/osif/osif_baremetal.c 
+E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.2/rtos/osif/osif_baremetal.c 
 
 OBJS += \
 ./SDK/rtos/osif/osif_baremetal.o 
@@ -14,7 +14,7 @@ C_DEPS += \
 
 
 # Each subdirectory must supply rules for building sources it contributes
-SDK/rtos/osif/osif_baremetal.o: C:/NXP/S32DS.3.5/S32DS/software/S32SDK_S32K1XX_RTM_4.0.2/rtos/osif/osif_baremetal.c
+SDK/rtos/osif/osif_baremetal.o: E:/S32/S32DS/software/S32SDK_S32K1XX_RTM_4.0.2/rtos/osif/osif_baremetal.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: Standard S32DS C Compiler'
 	arm-none-eabi-gcc "@SDK/rtos/osif/osif_baremetal.args" -MMD -MP -MF"$(@:%.o=%.d)" -MT"$@" -o "$@" "$<"

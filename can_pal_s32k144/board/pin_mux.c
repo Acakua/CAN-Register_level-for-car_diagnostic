@@ -7,6 +7,7 @@ processor: S32K144
 package_id: S32K144_LQFP100
 mcu_data: s32sdk_s32k1xx_rtm_402
 processor_version: 0.0.0
+external_user_signals: {}
 pin_labels:
 - {pin_num: '74', pin_signal: PTB11, label: Button0, identifier: Button0}
 - {pin_num: '68', pin_signal: PTB12, label: Button1, identifier: Button1}
