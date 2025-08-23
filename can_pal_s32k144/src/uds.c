@@ -2,6 +2,7 @@
 #include "dtc.h"
 #include <string.h>
 #include "FlexCan.h"
+#include <stdbool.h>
 
 /**
  * @brief Defines the type of response flow for the current UDS transaction.
@@ -509,6 +510,9 @@ void UDS_DispatchService(const CAN_Message_t msg_rx) {
 	case UDS_SERVICE_READ_DTC_INFORMATION:
 		handleReadDTCInformation(&msg_rx);
 		break;
+    case UDS_SERVICE_CLEAR_DTC:
+        handleClearDiagnosticInformation(&msg_rx);
+        break;
 	default:
 		udsCtx.flow = UDS_FLOW_NEG;
 		udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;

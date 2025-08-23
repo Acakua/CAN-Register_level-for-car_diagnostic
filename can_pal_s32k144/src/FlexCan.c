@@ -147,30 +147,23 @@ void FLEXCAN0_transmit_msg(const CAN_Message_t *msg) {
  * - Non-blocking: returns 0 if no message or ID mismatch.
  */
 int FLEXCAN0_receive_msg(CAN_Message_t *msg, uint32_t expectedID) {
-    /* Step 1: Check RX mailbox flag */
     if (CAN0->IFLAG1 & (1 << RX_MB_INDEX)) {
-        /* Step 2: Clear flag */
         CAN0->IFLAG1 = (1 << RX_MB_INDEX);
 
-        /* Step 3: Read control/status and ID */
         uint32_t word0 = CAN0->RAMn[4 * RX_MB_INDEX];
         uint32_t word1 = CAN0->RAMn[4 * RX_MB_INDEX + 1];
 
-        /* Step 4: Extract ID and DLC */
         uint32_t rxID = (word1 >> 18) & 0x7FF;
         uint8_t dlc  = (word0 >> 16) & 0xF;
 
-        /* Step 5: Validate ID */
         if (rxID != expectedID) {
             CAN0->RAMn[4 * RX_MB_INDEX] = 0x04000000 | (8 << 16);
             return 0;
         }
 
-        /* Step 6: Store received ID & DLC */
         msg->canID = rxID;
-        msg->dlc = dlc;
+        msg->dlc   = dlc;
 
-        /* Step 7: Read and unpack data */
         uint32_t dataWord0 = CAN0->RAMn[4 * RX_MB_INDEX + 2];
         uint32_t dataWord1 = CAN0->RAMn[4 * RX_MB_INDEX + 3];
 
@@ -183,11 +176,10 @@ int FLEXCAN0_receive_msg(CAN_Message_t *msg, uint32_t expectedID) {
         msg->data[6] = (dataWord1 >> 8)  & 0xFF;
         msg->data[7] = (dataWord1 >> 0)  & 0xFF;
 
-        /* Step 8: Reset RX mailbox to ready state */
         CAN0->RAMn[4 * RX_MB_INDEX] =
             0x04000000 | ((msg->dlc & 0xF) << 16);
 
-        return 1; /* Step 9: Success */
+        return 1; /* Success */
     }
     return 0; /* No message */
 }
