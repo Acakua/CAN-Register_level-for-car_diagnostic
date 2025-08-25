@@ -1,5 +1,5 @@
-#ifndef INC_DTC_H_
-#define INC_DTC_H_
+#ifndef DTC_H_
+#define DTC_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -76,4 +76,4 @@ uint8_t DTC_GetCount(void);
  */
 int8_t DTC_Find(uint32_t dtc_code);
 
-#endif /* INC_DTC_H_ */
+#endif /* DTC_H_ */

@@ -1,4 +1,3 @@
-
 #include "dtc.h"
 #include "nvm.h"
 #include <string.h> /* For memset and memcpy */

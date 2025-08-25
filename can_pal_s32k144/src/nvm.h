@@ -1,5 +1,5 @@
-#ifndef INC_NVM_H_
-#define INC_NVM_H_
+#ifndef NVM_H_
+#define NVM_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -64,4 +64,4 @@ NVM_Status NVM_Write(uint32_t offset, const uint8_t *data, uint8_t len);
  */
 NVM_Status NVM_Erase(uint32_t offset, uint32_t len);
 
-#endif /* INC_NVM_H_ */
+#endif /* NVM_H_ */
