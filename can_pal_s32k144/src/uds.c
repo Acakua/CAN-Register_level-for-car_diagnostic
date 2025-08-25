@@ -9,8 +9,8 @@
  */
 typedef enum {
     UDS_FLOW_NONE = 0, /* No response should be sent */
-    UDS_FLOW_POS,      /* A positive response should be sent */
-    UDS_FLOW_NEG       /* A negative response should be sent */
+    UDS_FLOW_POS,      /* Positive response */
+    UDS_FLOW_NEG       /* Negative response */
 } UDS_FlowType;
 
 /**

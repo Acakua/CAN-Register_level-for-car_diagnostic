@@ -1,21 +1,17 @@
-#ifndef INC_UDS_H_
-#define INC_UDS_H_
+#ifndef UDS_H_
+#define UDS_H_
 
 #include <stdint.h>
 #include <stdbool.h>
 #include "FlexCan.h"
+#include "dtc.h"
 
 /* ===== UDS Service IDs ===== */
 #define UDS_SERVICE_ECU_RESET                0x11
 #define UDS_SERVICE_READ_DID                 0x22
 #define UDS_SERVICE_WRITE_DID                0x2E
+#define UDS_SERVICE_CLEAR_DTC                0x14
 #define UDS_SERVICE_READ_DTC_INFORMATION     0x19
-
-/* --- Service 0x19 Sub-functions --- */
-#define SF_REPORT_NUMBER_OF_DTC_BY_STATUS_MASK          (0x01)
-#define SF_REPORT_DTC_BY_STATUS_MASK                    (0x02)
-#define SF_REPORT_DTC_SNAPSHOT_RECORD_BY_DTC_NUMBER     (0x04)
-#define SF_REPORT_SUPPORTED_DTC                         (0x0A)
 
 /* === NRC (Negative Response Codes) ===== */
 #define NRC_SERVICE_NOT_SUPPORTED        0x11
@@ -27,13 +23,6 @@
 #define NRC_GENERAL_PROGRAMMING_FAILURE  0x72
 #define NRC_RESPONSE_TOO_LONG            0x14
 
-/* --- DTC Format Identifier (for response messages) --- */
-#define DTC_FORMAT_ID_ISO14229_1 (0x01)
-
-/* --- ISO 15765-2 (ISO-TP) Protocol Control Information (PCI) Types --- */
-#define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
-#define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
-
 /* ===== DIDs ===== */
 #define DID_ENGINE_TEMP      0xF190
 #define DID_ENGINE_LIGHT     0xF191
@@ -43,6 +32,22 @@
 #define SECURITY_LEVEL_NONE     0
 #define SECURITY_LEVEL_ENGINE   1
 
+/* ===== Global Variables ===== */
+extern uint8_t currentSecurityLevel;
+extern uint16_t engineTemp;
+
+/* --- Service 0x19 Sub-functions --- */
+#define SF_REPORT_NUMBER_OF_DTC_BY_STATUS_MASK          (0x01)
+#define SF_REPORT_DTC_BY_STATUS_MASK                    (0x02)
+#define SF_REPORT_DTC_SNAPSHOT_RECORD_BY_DTC_NUMBER     (0x04)
+#define SF_REPORT_SUPPORTED_DTC                         (0x0A)
+
+/* --- DTC Format Identifier (for response messages) --- */
+#define DTC_FORMAT_ID_ISO14229_1 (0x01)
+
+/* --- ISO 15765-2 (ISO-TP) Protocol Control Information (PCI) Types --- */
+#define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
+#define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
 
 /**
  * @brief Main handler for UDS Service 0x19 (ReadDTCInformation).
