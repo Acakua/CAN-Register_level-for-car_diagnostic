@@ -26,6 +26,11 @@
 #define DID_ENGINE_LIGHT     0xF191
 #define DID_THRESHOLD        0xF192
 
+/* --- ISO 15765-2 (ISO-TP) Protocol Control Information (PCI) Types --- */
+#define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
+#define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
+
+
 // ===== Security Levels =====
 #define SECURITY_LEVEL_NONE     0
 #define SECURITY_LEVEL_ENGINE   1
@@ -43,6 +48,7 @@ void handleECUReset(const CAN_Message_t msg_rx);
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx);
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx);
 void UDS_SendResponse(void);
+void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length);
 
 // External dependencies (must be implemented elsewhere)
 bool isResetConditionOk(void);

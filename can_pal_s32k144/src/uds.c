@@ -1,46 +1,73 @@
 #include "uds.h"
 #include "adc.h"
+#include <string.h>
 #include "nvm.h"
 
 // ==== Global Variables ====
-// Current security level
-uint8_t currentSecurityLevel = SECURITY_LEVEL_ENGINE;
 
-// Threshold engine temperature used for ReadDID response
-uint16_t engineTemp = 0x1234;
+/** Current security level (used for access checks in UDS services) */
+uint8_t  currentSecurityLevel = SECURITY_LEVEL_ENGINE;
+
+/** Threshold engine temperature (example DID value) */
+uint16_t engineTemp           = 0x1234;
+
+
+
+// ==== UDS Context Types ====
 
 /**
- * @brief Data type representing the UDS response state.
+ * @brief UDS response flow state
  *
- * Enumerates the possible response flows in the UDS transaction:
  * - UDS_FLOW_NONE: No response will be sent.
- * - UDS_FLOW_POS:  Positive Response.
- * - UDS_FLOW_NEG:  Negative Response.
+ * - UDS_FLOW_POS : Positive Response (0x40 | SID).
+ * - UDS_FLOW_NEG : Negative Response (0x7F, SID, NRC).
  */
 typedef enum {
-    UDS_FLOW_NONE = 0,   // No response to be sent
-    UDS_FLOW_POS,        // Positive Response
-    UDS_FLOW_NEG         // Negative Response
+    UDS_FLOW_NONE = 0,
+    UDS_FLOW_POS,
+    UDS_FLOW_NEG
 } UDS_FlowType;
 
 /**
- * @brief Structure holding the current UDS processing state.
+ * @brief Holds the current UDS request/response state
  *
  * Members:
- * - flow: POS/NEG/NONE for current transaction.
- * - sid:  Service ID being processed.
- * - nrc:  Negative Response Code if flow = NEG.
- * - msg:  Prepared CAN message for POS response.
+ * - flow       : POS / NEG / NONE.
+ * - sid        : Service ID of the request.
+ * - nrc        : Negative Response Code (if flow = NEG).
+ * - payload    : Pointer to data of POS response.
+ * - payload_len: Length of payload.
  */
 typedef struct {
-    UDS_FlowType flow;   // POS / NEG / NONE
-    uint8_t sid;         // Service ID of the current request
-    uint8_t nrc;         // Negative Response Code (if flow = NEG)
-    CAN_Message_t msg;   // Buffer containing the response packet
+    UDS_FlowType   flow;
+    uint8_t        sid;
+    uint8_t        nrc;
+    const uint8_t* payload;
+    uint16_t       payload_len;
 } UDS_Context;
 
-// Global UDS context: persistent across service calls
+/** Global context used across service handlers */
 static UDS_Context udsCtx;
+
+
+// ==== Utility Functions ====
+
+/**
+ * @brief Simple busy-wait delay (optional)
+ *
+ * @param ms Milliseconds to wait
+ */
+static void delay_ms(volatile uint32_t ms) {
+    volatile uint32_t i, j;
+    for (i = 0; i < ms; i++) {
+        for (j = 0; j < 5000; j++) { 
+            __asm__("nop");
+        }
+    }
+}
+
+
+// ==== UDS Dispatcher ====
 
 /**
  * @brief Dispatches an incoming UDS request to the correct service handler.
@@ -54,343 +81,428 @@ static UDS_Context udsCtx;
  *
  * Processing logic:
  * 1) Extract SID = msg_rx.data[1].
- * 2) Reset udsCtx: flow=NONE, sid=SID, nrc=0.
+ * 2) Reset udsCtx: flow=NONE, sid=SID, nrc=0, payload=NULL.
  * 3) Switch on SID:
  *    - 0x11 (ECU Reset)        -> handleECUReset()
  *    - 0x2E (Write DID)        -> handleWriteDataByIdentifier()
  *    - 0x22 (Read DID)         -> handleReadDataByIdentifier()
  *    - default                 -> flow=NEG, nrc=NRC_SERVICE_NOT_SUPPORTED
- * 4) Call UDS_SendResponse().
+ * 4) Call UDS_SendResponse() to transmit reply.
  *
  * Context:
- * - Uses global udsCtx to store the response state.
- * - Handlers are responsible for validating format and setting udsCtx.
+ * - Uses global udsCtx to store response state.
+ * - Handlers set udsCtx.flow, payload, and payload_len appropriately.
  */
 void UDS_DispatchService(const CAN_Message_t msg_rx) {
     uint8_t sid = msg_rx.data[1];
 
-    // Step 1: Reset context for new request
-    udsCtx.flow = UDS_FLOW_NONE;
-    udsCtx.sid = sid;
-    udsCtx.nrc = 0;
+    // Reset context
+    udsCtx.flow        = UDS_FLOW_NONE;
+    udsCtx.sid         = sid;
+    udsCtx.nrc         = 0;
+    udsCtx.payload     = NULL;
+    udsCtx.payload_len = 0;
 
-    // Step 2: Dispatch to service-specific handler
     switch (sid) {
     case UDS_SERVICE_ECU_RESET:
         handleECUReset(msg_rx);
         break;
-
     case UDS_SERVICE_WRITE_DID:
         handleWriteDataByIdentifier(msg_rx);
         break;
-
     case UDS_SERVICE_READ_DID:
         handleReadDataByIdentifier(msg_rx);
         break;
-
     default:
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;
+        udsCtx.nrc  = NRC_SERVICE_NOT_SUPPORTED;
         break;
     }
 
-    // Step 3: Send final response
     UDS_SendResponse();
 }
 
+
+// ==== UDS Response Sender ====
+
 /**
- * @brief Transmits a UDS response according to udsCtx state.
+ * @brief Transmits a UDS response frame based on udsCtx state.
  *
- * If udsCtx.flow == POS -> send udsCtx.msg as-is.
- * If udsCtx.flow == NEG -> construct and send a Negative Response [0x7F, SID, NRC].
- * If udsCtx.flow == NONE -> send nothing.
+ * Behavior:
+ * - If udsCtx.flow == NEG:
+ *    -> Build and send a Negative Response frame:
+ *       [0x03, 0x7F, SID, NRC].
+ * - If udsCtx.flow == POS:
+ *    -> Build a Positive Response:
+ *       - If total length <= 7: send as Single Frame.
+ *       - If >7: delegate to ISO-TP multi-frame handler.
+ * - If udsCtx.flow == NONE:
+ *    -> Do nothing.
  *
- * Special case: If POS response for ECU Reset is sent, trigger ECU reset after TX.
+ * Payload format:
+ * - POS response = [length, rspSID (0x40|SID), payload...].
+ * - NEG response = [length=3, 0x7F, SID, NRC].
+ *
+ * Context:
+ * - Uses udsCtx.payload and udsCtx.payload_len to assemble response.
+ * - CAN Tx via FLEXCAN0_transmit_msg().
  */
 void UDS_SendResponse(void) {
-    CAN_Message_t rsp;
-    rsp.canID = 0x768;
+    if (udsCtx.flow == UDS_FLOW_NEG) {
+        // ---- Negative Response ----
+        CAN_Message_t msg;
+        msg.canID   = TX_MSG_ID_UDS;
+        msg.dlc     = 4;
+        msg.data[0] = 0x03;        // length=3
+        msg.data[1] = 0x7F;        // NRC header
+        msg.data[2] = udsCtx.sid;  // original SID
+        msg.data[3] = udsCtx.nrc;  // NRC
+        FLEXCAN0_transmit_msg(&msg);
 
-    if (udsCtx.flow == UDS_FLOW_POS) {
-        // Send prepared POS response
-        rsp = udsCtx.msg;
-    } else if (udsCtx.flow == UDS_FLOW_NEG) {
-        // Build standard NRC frame
-        rsp.dlc = 4;
-        rsp.data[0] = 0x03;           // Length byte
-        rsp.data[1] = 0x7F;           // NRC identifier
-        rsp.data[2] = udsCtx.sid;     // Original SID
-        rsp.data[3] = udsCtx.nrc;     // Negative Response Code
-    } else {
-        return; // NONE -> nothing to send
+    } else if (udsCtx.flow == UDS_FLOW_POS) {
+        // ---- Positive Response ----
+        uint8_t  response_sid     = udsCtx.sid + 0x40;
+        uint16_t total_uds_length = 1 + udsCtx.payload_len;
+
+        if (total_uds_length <= 7) {
+            // Single Frame response
+            CAN_Message_t msg;
+            msg.canID   = TX_MSG_ID_UDS;
+            msg.dlc     = 1 + total_uds_length;
+            msg.data[0] = (uint8_t)total_uds_length;
+            msg.data[1] = response_sid;
+            if (udsCtx.payload && udsCtx.payload_len) {
+                memcpy(&msg.data[2], udsCtx.payload, udsCtx.payload_len);
+            }
+            FLEXCAN0_transmit_msg(&msg);
+        } else {
+            // Multi-frame response via ISO-TP
+            static uint8_t full_uds_payload[4095];
+            full_uds_payload[0] = response_sid;
+            if (udsCtx.payload && udsCtx.payload_len) {
+                memcpy(&full_uds_payload[1], udsCtx.payload, udsCtx.payload_len);
+            }
+            UDS_SendMultiFrameISO_TP(full_uds_payload, total_uds_length);
+        }
     }
-
-    // Send via CAN
-    FLEXCAN0_transmit_msg(&rsp);
 
     // Special case: Trigger ECU Reset after positive 0x11 response
-    if (udsCtx.flow == UDS_FLOW_POS && udsCtx.sid == UDS_SERVICE_ECU_RESET) {
-        ECU_Reset();
-    }
+	if (udsCtx.flow == UDS_FLOW_POS && udsCtx.sid == UDS_SERVICE_ECU_RESET) {
+		ECU_Reset();
+	}
+
 }
 
+
 /**
- * @brief Handles UDS ECU Reset (SID = 0x11).
+ * @brief Transmit a multi-frame UDS payload using a simplified ISO-TP flow.
  *
- * Validates request format, supported sub-function, conditions, and security.
- * If sub-function bit 7 is clear -> send positive response first.
- * If bit 7 is set -> perform reset immediately without response.
+ * Builds and transmits First Frame (FF) followed by Consecutive Frames (CF)
+ * with a rolling 4-bit sequence number, assuming a permissive Flow Control.
  *
- * @param msg_rx Incoming CAN message: [len, 0x11, sub-function]
+ * @param data   Pointer to full UDS payload (RspSID + payload bytes).
+ * @param length Total payload length in bytes.
  *
- * Steps:
+ * Processing logic:
+ * 1) Send FF (8-byte CAN frame): PCI=FirstFrame + length(12-bit), first 6 data bytes.
+ * 2) Wait a small fixed delay (assumes tester sent FC/CTS; no parsing here).
+ * 3) Stream CFs, 7 data bytes per frame; pad tail bytes with 0xAA if short.
+ * 4) Sequence number wraps 0..15 per ISO-TP.
+ *
+ * Effects/Assumptions:
+ * - Uses TX_MSG_ID_UDS and FLEXCAN0_transmit_msg() to send frames.
+ * - No FC parsing, block-size, or true STmin handling (simplified model).
+ */
+void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
+	CAN_Message_t msg;
+	msg.canID = TX_MSG_ID_UDS;
+	msg.dlc = 8; /* Both First Frames and Consecutive Frames always use 8-byte DLC. */
+
+	uint16_t bytes_sent = 0;
+	uint8_t sequence_number = 1;
+
+	/* --- Step 1: Send the First Frame (FF) --- */
+    /* The FF contains control information and the first 6 bytes of data. */
+    /* PCI: Type + Upper 4 bits of length */
+	msg.data[0] = ISO_TP_PCI_TYPE_FIRST_FRAME | (uint8_t) (length >> 8);
+    /* Lower 8 bits of length */
+	msg.data[1] = (uint8_t) (length & 0xFF);
+	memcpy(&msg.data[2], &data[bytes_sent], 6);
+	FLEXCAN0_transmit_msg(&msg);
+	bytes_sent += 6;
+
+	/* --- Step 2: Wait for Flow Control (FC) frame from the tester --- */
+    /* A full implementation would parse the FC frame. This simplified version
+       just waits a fixed amount of time, assuming a "ClearToSend" response. */
+	delay_ms(10);
+
+	/* --- Step 3: Send all Consecutive Frames (CF) --- */
+    /* CFs contain the remaining data, 7 bytes at a time. */
+	while (bytes_sent < length) {
+        /* The CF PCI byte contains the type and a 4-bit rolling sequence number. */
+		msg.data[0] = ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME | sequence_number;
+
+        /* Calculate how many bytes to copy into this frame. */
+		uint16_t remaining_bytes = length - bytes_sent;
+		uint8_t bytes_to_copy;
+		if (remaining_bytes > 7) {
+			bytes_to_copy = 7;
+		} else {
+			bytes_to_copy = (uint8_t) remaining_bytes;
+		}
+
+		memcpy(&msg.data[1], &data[bytes_sent], bytes_to_copy);
+
+		/* If this is the last frame and it's not full, pad the remaining bytes. */
+		if (bytes_to_copy < 7) {
+			memset(&msg.data[1 + bytes_to_copy], 0xAA, 7 - bytes_to_copy);
+		}
+
+		FLEXCAN0_transmit_msg(&msg);
+
+		bytes_sent += bytes_to_copy;
+		sequence_number = (sequence_number + 1) % 16; /* Sequence number wraps around from 15 to 0. */
+		delay_ms(5); /* Wait for STmin (Separation Time Minimum) before sending the next frame. */
+	}
+}
+
+// =====================================================
+// ==== ECU Reset Handler (SID 0x11) ====
+// =====================================================
+
+/**
+ * @brief Handles ECU Reset service (SID = 0x11).
+ *
+ * Validates format and sub-function, checks reset conditions and security,
+ * then prepares positive or negative response. If sub-function bit7 is set,
+ * ECU reset may be triggered without response.
+ *
+ * @param msg_rx Incoming CAN message:
+ *               - Format: [len, 0x11, sub-function].
+ *               - sub-function 0x01 = Hard Reset (only supported).
+ *
+ * Processing logic:
  * 1) Verify length byte matches DLC - 1.
- * 2) Require DLC >= 3 bytes (len, SID, sub-function).
- * 3) Check sub-function = 0x01 (hard reset) only.
- * 4) Validate reset conditions and security access.
- * 5) If sub-function bit7=0 -> prepare POS response [0x02 , 0x51, sub-function].
- *    If bit7=1 -> trigger immediate reset without response.
+ * 2) Check DLC >= 3 (SID + subfunc).
+ * 3) Verify sub-function = 0x01 (bit7 ignored).
+ * 4) Check conditions (isResetConditionOk()).
+ * 5) Check security access level.
+ * 6) If bit7 clear:
+ *    -> Prepare POS response [rspSID=0x51, sub-function].
+ * 7) If bit7 set:
+ *    -> flow=NONE, optional immediate ECU_Reset().
+ *
+ * Context:
+ * - Updates udsCtx.flow and payload.
+ * - ECU reset performed separately if required.
  */
 void handleECUReset(const CAN_Message_t msg_rx) {
-    // Step 1: Length byte check
-    if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
-        return;
-    }
+	 if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
 
-    // Step 2: DLC check
     if (msg_rx.dlc < 3) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
+        udsCtx.nrc  = NRC_INCORRECT_LENGTH;
         return;
     }
 
     uint8_t subFunc = msg_rx.data[2];
 
-    // Step 3: Sub-function support check
     if ((subFunc & 0x7F) != 0x01) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_SUBFUNC_NOT_SUPPORTED;
+        udsCtx.nrc  = NRC_SUBFUNC_NOT_SUPPORTED;
         return;
     }
 
-    // Step 4: Conditions check
     if (!isResetConditionOk()) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_CONDITIONS_NOT_CORRECT;
+        udsCtx.nrc  = NRC_CONDITIONS_NOT_CORRECT;
         return;
     }
 
-    // Step 5: Security check
     if (currentSecurityLevel < SECURITY_LEVEL_ENGINE) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_SECURITY_ACCESS_DENIED;
+        udsCtx.nrc  = NRC_SECURITY_ACCESS_DENIED;
         return;
     }
 
-    // Step 6: Response or immediate reset
+    // Positive response (bit7=0)
     if (!(subFunc & 0x80)) {
-        udsCtx.flow = UDS_FLOW_POS;
-        udsCtx.msg.canID = 0x768;
-        udsCtx.msg.dlc   = 3;
-        udsCtx.msg.data[0] = 0x02;       // Length
-        udsCtx.msg.data[1] = 0x51;       // POS SID (0x11 + 0x40)
-        udsCtx.msg.data[2] = subFunc;
+        static uint8_t payload[1];
+        payload[0] = subFunc;
+
+        udsCtx.flow        = UDS_FLOW_POS;
+        udsCtx.payload     = payload;
+        udsCtx.payload_len = 1;
     } else {
+        // No response, optional immediate ECU_Reset()
         udsCtx.flow = UDS_FLOW_NONE;
         ECU_Reset();
     }
+
 }
+
+
+// ==== WriteDataByIdentifier Handler (SID 0x2E) ====
 
 /**
  * @brief Handles WriteDataByIdentifier (SID = 0x2E).
  *
- * Writes new value to a supported DID after validating:
- * - Length byte & DLC.
- * - Supported DID.
- * - Data size limit.
- * - Security & condition checks.
- * - Value range.
- * - NVM write success.
+ * Writes a new value to a supported DID (Data Identifier), after
+ * validating message length, DID support, security, and value range.
  *
  * @param msg_rx Incoming CAN message:
- *               [len, 0x2E, DID_H, DID_L, data_H, data_L]
+ *               Format: [len, 0x2E, DID_H, DID_L, data...].
  *
- * Steps:
- * 1) Length check (len == DLC - 1).
- * 2) Require DLC >= 5.  (1 byte len, 1 byte SID, 2 bytes DID, at least 1 byte data)
- * 3) DID support check (only DID_THRESHOLD allowed).
- * 4) Data length check (max 2 bytes data for DID_THRESHOLD).
- * 5) Security access validation.
- * 6) Condition validation.
- * 7) Value range check (< 4096).
- * 8) Write to NVM.
- * 9) Prepare POS response [0x03, 0x6E, DID high, DID Low].
+ * Processing logic:
+ * 1) Verify length byte matches DLC - 1.
+ * 2) Check minimum length (>=5 bytes).
+ * 3) Extract DID = data[2..3], verify supported (only DID_THRESHOLD).
+ * 4) Reject if message too long (>=7).
+ * 5) Check security (isSecurityAccessGranted()).
+ * 6) Check conditions (isConditionOk()).
+ * 7) Parse new value (2 bytes).
+ * 8) Range check (value < 4096).
+ * 9) Write to NVM (writeToNVM()).
+ *    - On failure -> NRC_GENERAL_PROGRAMMING_FAILURE.
+ * 10) On success -> POS response [rspSID, DID_H, DID_L].
+ *
+ * Context:
+ * - Updates engineTemp variable if write successful.
+ * - Uses udsCtx.payload to return DID echo.
  */
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
-    // Step 1: Length check
-    if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
-        return;
-    }
+	 if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
 
-    // Step 2: Minimum length
     if (msg_rx.dlc < 5) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
+        udsCtx.nrc  = NRC_INCORRECT_LENGTH;
         return;
     }
 
     uint16_t did = (msg_rx.data[2] << 8) | msg_rx.data[3];
 
-    // Step 3: Supported DID check
     if (did != DID_THRESHOLD) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+        udsCtx.nrc  = NRC_REQUEST_OUT_OF_RANGE;
         return;
     }
 
-    // Step 4: Max length
     if (msg_rx.dlc >= 7) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
+        udsCtx.nrc  = NRC_INCORRECT_LENGTH;
         return;
     }
 
-    // Step 5: Security check
     if (!isSecurityAccessGranted(did)) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_SECURITY_ACCESS_DENIED;
+        udsCtx.nrc  = NRC_SECURITY_ACCESS_DENIED;
         return;
     }
 
-    // Step 6: Condition check
     if (!isConditionOk(did)) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_CONDITIONS_NOT_CORRECT;
+        udsCtx.nrc  = NRC_CONDITIONS_NOT_CORRECT;
         return;
     }
 
     uint16_t newVal = (msg_rx.data[4] << 8) | msg_rx.data[5];
-
-    // Step 7: Value range check
     if (newVal >= 4096) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+        udsCtx.nrc  = NRC_REQUEST_OUT_OF_RANGE;
         return;
     }
 
-    // Step 8: NVM write
-    bool writeSuccess = writeToNVM(did, newVal);
-
-    if (!writeSuccess) {
+    if (!writeToNVM(did, newVal)) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_GENERAL_PROGRAMMING_FAILURE;
+        udsCtx.nrc  = NRC_GENERAL_PROGRAMMING_FAILURE;
         return;
-    } else engineTemp = newVal;
+    }
 
-    // Step 9: Positive response
-    udsCtx.flow = UDS_FLOW_POS;
-    udsCtx.msg.canID = 0x768;
-    udsCtx.msg.dlc = 4;
-    udsCtx.msg.data[0] = 0x03;
-    udsCtx.msg.data[1] = 0x6E;   // POS SID (0x2E + 0x40)
-    udsCtx.msg.data[2] = msg_rx.data[2];
-    udsCtx.msg.data[3] = msg_rx.data[3];
+    // Build POS payload
+    static uint8_t payload[2];
+    payload[0] = msg_rx.data[2];
+    payload[1] = msg_rx.data[3];
+
+    udsCtx.flow        = UDS_FLOW_POS;
+    udsCtx.payload     = payload;
+    udsCtx.payload_len = 2;
 }
 
+// ==== ReadDataByIdentifier Handler (SID 0x22) ====
+
 /**
- * @brief Handle "Read Data By Identifier" (UDS SID = 0x22) requests.
+ * @brief Handles ReadDataByIdentifier (SID = 0x22).
  *
- * Parses one or more DIDs from the incoming CAN frame, validates them,
- * and constructs a positive response containing the DID(s) and their
- * corresponding values. If any validation fails, sets a negative response
- * code in udsCtx and returns immediately.
+ * Reads one or more DIDs and builds a response with DID+value pairs.
  *
- * @param msg_rx Received CAN message:
- *               - msg_rx.data[0] : Length byte (excluding itself)
- *               - msg_rx.data[1] : SID = 0x22 (ReadDataByIdentifier)
- *               - msg_rx.data[2+] : Sequence of DID_H, DID_L pairs
- *               - msg_rx.dlc     : Number of bytes in the frame
+ * @param msg_rx Incoming CAN message:
+ *               Format: [len, 0x22, DID1_H, DID1_L, DID2_H, DID2_L, ...].
  *
  * Processing logic:
- * 1) Check data[0] matches DLC - 1.
- * 2) Ensure DLC >= 4 and that parameter bytes form complete DID pairs.
- * 3) Initialize response:
- *    - Set udsCtx.msg.canID = 0x768 (response CAN ID)
- *    - Set udsCtx.msg.data[1] = 0x62 (positive response SID = 0x22 + 0x40)
- * 4) For each DID in the request:
- *    - Check if DID is supported (DID_ENGINE_TEMP, DID_THRESHOLD, DID_ENGINE_LIGHT).
- *    - If adding 4 bytes (DID_H, DID_L, val_H, val_L) would exceed CAN payload (8 bytes), respond NEG: NRC_RESPONSE_TOO_LONG.
- *    - Check security access via isSecurityAccessGranted().
- *    - Check environmental/operational conditions via isConditionOk().
- *    - Read the DID value:
- *         • DID_ENGINE_TEMP -> myADC_Read(13)
- *         • DID_ENGINE_LIGHT -> myADC_Read(12)
- *         • DID_THRESHOLD -> use engineTemp variable
- *    - Append DID_H, DID_L, val_H, val_L to udsCtx.msg.data[]
- *    - Increment validCount
- * 5) If no valid DID found (validCount == 0), respond NEG: NRC_REQUEST_OUT_OF_RANGE.
- * 6) On success, set udsCtx.flow = UDS_FLOW_POS, udsCtx.msg.dlc = responseIdx,
- *    and udsCtx.msg.data[0] = response length (excluding length byte itself).
+ * 1) Verify length byte matches DLC - 1.
+ * 2) Verify minimum DLC >= 4 and even number of bytes after SID.
+ * 3) For each DID:
+ *    - Check if DID is supported (ENGINE_TEMP, THRESHOLD, ENGINE_LIGHT).
+ *    - Ensure response payload does not exceed buffer.
+ *    - Validate security (isSecurityAccessGranted()).
+ *    - Validate conditions (isConditionOk()).
+ *    - Read value:
+ *       * DID_ENGINE_TEMP   -> myADC_Read(13).
+ *       * DID_ENGINE_LIGHT  -> myADC_Read(12).
+ *       * DID_THRESHOLD     -> engineTemp variable.
+ *    - Append DID_H, DID_L, val_H, val_L to response payload.
+ * 4) If no valid DID found -> NRC_REQUEST_OUT_OF_RANGE.
+ * 5) Otherwise -> POS response [rspSID, DID+val...].
  *
  * Context:
- * - Uses global udsCtx to store response data and flow state.
- * - Relies on global constants for DID IDs and NRC codes.
- * - This function does not send the response directly; UDS_SendResponse() handles transmission.
+ * - Uses static response_payload[] buffer.
+ * - Updates udsCtx.flow and payload.
  */
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
-    // Step 1: Check that length byte matches DLC - 1
-    if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+	 if (msg_rx.data[0] != (msg_rx.dlc - 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
+
+
+    if (msg_rx.dlc < 4 || (msg_rx.dlc % 2) != 0) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
+        udsCtx.nrc  = NRC_INCORRECT_LENGTH;
         return;
     }
 
-    // Step 2: Check minimum length (>= 4) and even parameter count (DID pairs)
-    if (msg_rx.dlc < 4 || ((msg_rx.dlc) % 2) != 0) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_INCORRECT_LENGTH;
-        return;
-    }
+    static uint8_t response_payload[16];
+    uint16_t payload_len = 0;
 
-    uint8_t validCount = 0;       // Number of valid DIDs processed
-    uint8_t responseIdx = 2;      // Start index for DID/value pairs in response
-
-    // Step 3: Initialize positive response frame header
-    udsCtx.msg.canID = 0x768;     // Response CAN ID
-    udsCtx.msg.data[1] = 0x62;    // Positive SID (0x22 + 0x40)
-
-    // Step 4: Iterate over requested DIDs
     for (uint8_t i = 2; i < msg_rx.dlc; i += 2) {
         uint16_t did = (msg_rx.data[i] << 8) | msg_rx.data[i + 1];
 
-        // Check if DID is supported
         if (did == DID_ENGINE_TEMP || did == DID_THRESHOLD || did == DID_ENGINE_LIGHT) {
-            // Check if adding this DID would exceed CAN payload limit
-            if (responseIdx + 4 > 8) {
+            if (payload_len + 4 > sizeof(response_payload)) {
                 udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc = NRC_RESPONSE_TOO_LONG;
+                udsCtx.nrc  = NRC_RESPONSE_TOO_LONG;
                 return;
             }
-
-            // Security access check
             if (!isSecurityAccessGranted(did)) {
                 udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc = NRC_SECURITY_ACCESS_DENIED;
+                udsCtx.nrc  = NRC_SECURITY_ACCESS_DENIED;
                 return;
             }
-
-            // Condition check
             if (!isConditionOk(did)) {
                 udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc = NRC_CONDITIONS_NOT_CORRECT;
+                udsCtx.nrc  = NRC_CONDITIONS_NOT_CORRECT;
                 return;
             }
 
-            // Read DID value based on DID type
             uint16_t value;
             if (did == DID_ENGINE_TEMP) {
                 value = myADC_Read(13);
@@ -400,73 +512,52 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
                 value = engineTemp;
             }
 
-            // Append DID and value to response
-            udsCtx.msg.data[responseIdx++] = msg_rx.data[i];     // DID high byte
-            udsCtx.msg.data[responseIdx++] = msg_rx.data[i + 1]; // DID low byte
-            udsCtx.msg.data[responseIdx++] = value >> 8;         // Value high byte
-            udsCtx.msg.data[responseIdx++] = value & 0xFF;       // Value low byte
-
-            validCount++;
+            response_payload[payload_len++] = (uint8_t)(did >> 8);
+            response_payload[payload_len++] = (uint8_t)(did & 0xFF);
+            response_payload[payload_len++] = (uint8_t)(value >> 8);
+            response_payload[payload_len++] = (uint8_t)(value & 0xFF);
         }
     }
 
-    // Step 5: No valid DID found -> NEG response
-    if (validCount == 0) {
+    if (payload_len == 0) {
         udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+        udsCtx.nrc  = NRC_REQUEST_OUT_OF_RANGE;
         return;
     }
 
-    // Step 6: Prepare positive response
-    udsCtx.flow = UDS_FLOW_POS;
-    udsCtx.msg.dlc = responseIdx;
-    udsCtx.msg.data[0] = responseIdx - 1; // Length excluding length byte itself
+    udsCtx.flow        = UDS_FLOW_POS;
+    udsCtx.payload     = response_payload;
+    udsCtx.payload_len = payload_len;
 }
 
 
-
-
+// ==== Helpers & Stubs ====
 
 /**
- * @brief Checks if ECU reset conditions are met.
+ * @brief Checks if ECU reset conditions are OK.
  *
- * This would check hardware or software states
- * to decide if an ECU reset is safe to perform at the moment.
- *
- * @return true if conditions are OK, false otherwise.
+ * Could check hardware/software state, ignition, etc.
+ * In demo: always returns true.
  */
-bool isResetConditionOk(void) {
-    // Example: Always OK in this demo
-    return true;
-}
+bool isResetConditionOk(void) { return true; }
 
 /**
  * @brief Checks if the given DID has security access granted.
  *
- * This would verify that the security
- * access level is high enough for the requested DID.
- *
- * @param did The DID being accessed.
- * @return true if access is granted, false otherwise.
  */
 bool isSecurityAccessGranted(uint16_t did) {
-    // Example: Allow all in this demo
+    (void)did;
     return true;
 }
 
 /**
  * @brief Checks if the given DID can be accessed under current conditions.
  *
- * Could verify ignition state, ECU mode, or other environmental factors.
- *
- * @param did The DID being accessed.
- * @return true if conditions allow access, false otherwise.
  */
 bool isConditionOk(uint16_t did) {
-    // Example: Always OK in this demo
+    (void)did;
     return true;
 }
-
 
 /**
  * @brief Writes a value to NVM for a specific DID.
@@ -507,36 +598,33 @@ bool writeToNVM(uint16_t did, uint16_t value) {
     }
 }
 
+
+// ==== ECU Reset implementation ====
+
+#define SCB_AIRCR               (*(volatile uint32_t*)0xE000ED0C)
+#define SCB_AIRCR_VECTKEY_MASK  (0x5FAu << 16)
+#define SCB_AIRCR_SYSRESETREQ   (1u << 2)
+
 /**
- * @brief Perform a system reset of the ECU via Cortex-M System Control Block.
+ * @brief Perform ECU reset using Cortex-M System Control Block (SCB).
  *
- * Writes the VECTKEY (0x5FA) and SYSRESETREQ bit into the SCB Application
- * Interrupt and Reset Control Register (AIRCR) to request a system-wide reset.
- * After triggering, the function enters an infinite loop until the reset
- * takes effect.
- *
- * @note This reset mechanism is defined by ARM Cortex-M architecture.
- *       It is equivalent to a hardware reset — all peripherals and CPU state
- *       are reinitialized as if power-cycled.
+ * Writes to SCB->AIRCR register with SYSRESETREQ set. Causes system-wide reset,
+ * equivalent to a hardware reset. CPU and peripherals are reinitialized.
  *
  * Processing logic:
- * 1) Prepare the AIRCR write:
- *    - Bits [31:16] = VECTKEY = 0x5FA (required unlock key for write access).
- *    - Bit 2 (SYSRESETREQ) = 1 to request a system reset.
- * 2) Write value to SCB_AIRCR register at address 0xE000ED0C.
- * 3) Enter infinite loop to wait for the reset to occur.
+ * 1) Write AIRCR with:
+ *    - VECTKEY = 0x5FA (bits [31:16]).
+ *    - SYSRESETREQ bit = 1.
+ * 2) Enter infinite loop waiting for reset.
  *
+ * @note This function does not return. System restarts automatically.
  */
 
-#define SCB_AIRCR                  (*(volatile uint32_t*)0xE000ED0C)
-#define SCB_AIRCR_VECTKEY_MASK    (0x5FA << 16)
-#define SCB_AIRCR_SYSRESETREQ     (1 << 2)
 
 void ECU_Reset(void) {
-    // Step 1 & 2: Write unlock key + reset request
     SCB_AIRCR = SCB_AIRCR_VECTKEY_MASK | SCB_AIRCR_SYSRESETREQ;
     while (1) {
-        // Step 3: Wait indefinitely for reset to happen
+
     }
 }
 
