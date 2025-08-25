@@ -1,109 +1,82 @@
-# Makefile cho S32K144 với GCC toolchain
+# ==========================
+# Project Configuration
+# ==========================
+TARGET      := main
+CPU         := S32K144HFT0VLLT
+BUILD_DIR   := build
 
-# Tên project
-TARGET = main
-CPU = S32K144HFT0VLLT
-
-# Toolchain
-CC = arm-none-eabi-gcc
-OBJCOPY = arm-none-eabi-objcopy
-SIZE = arm-none-eabi-size
-
-# Flags
-CFLAGS = -mcpu=cortex-m4 -mthumb -Wall -O0 -g -std=c11 -ffreestanding
-CFLAGS += -DCPU_$(CPU)
-#CFLAGS += -DS32K144_SERIES
-CFLAGS += -DS32K14x_SERIES
+CC       := arm-none-eabi-gcc
+OBJCOPY  := arm-none-eabi-objcopy
+SIZE     := arm-none-eabi-size
+MAKE := make
 
 
-ASFLAGS = $(CFLAGS)  # Dùng chung flag cho file .S
+# ==========================
+# Include submodules
+# ==========================
+MODULE_OBJS :=
 
-# Thư mục output
-BUILD_DIR = build
+# Chỉ include để lấy biến MODULE_OBJS
+include board/Makefile
+include src/Makefile
+include SDK/Makefile
 
-# Đường dẫn include
-INCLUDES = \
-  -I./CMSIS \
-  -I./CMSIS/devices \
-  -I./CMSIS/devices/S32K144 \
-  -I./drivers \
-  -I./src \
-  -I./board \
-  -I./startup \
-  -I./SDK \
-  -I./SDK/platform \
-  -I./SDK/platform/devices \
-  -I./SDK/platform/devices/S32K144 \
-  -I./SDK/platform/devices/S32K144/startup \
-  -I./SDK/platform/drivers \
-  -I./SDK/platform/drivers/inc \
-  -I./SDK/platform/drivers/src/adc \
-  -I./SDK/platform/drivers/src/clock/S32K1xx \
-  -I./SDK/platform/drivers/src/pins \
-  -I./SDK/platform/drivers/src/interrupt \
-  -I./SDK/platform/pal/inc \
-  -I./SDK/rtos \
-  -I./SDK/rtos/osif \
-  -I./S32K144/include \
-  -I./Project_Settings/Startup_Code
+# ==========================
+# Linker Script & Startup
+# ==========================
+LDSCRIPT     := Project_Settings/Linker_Files/S32K144_64_flash.ld
+STARTUP_SRC  := Project_Settings/Startup_Code/startup_S32K144.S
+STARTUP_OBJ  := $(BUILD_DIR)/startup_S32K144.o
 
-# File linker script
-LDSCRIPT = ./SDK/platform/devices/S32K144/linker/gcc/S32K144_64_flash.ld
+# ==========================
+# Build flags
+# ==========================
+CFLAGS  := -mcpu=cortex-m4 -mthumb -Wall -O0 -g -std=c11 -ffreestanding
+CFLAGS  += -DCPU_$(CPU) -DS32K14x_SERIES
+ASFLAGS := $(CFLAGS)
+LDFLAGS := -T$(LDSCRIPT) -nostartfiles -Wl,--gc-sections
 
-# File nguồn
-SRCS = \
-  src/main.c \
-  src/FlexCan.c \
-  board/clock_config.c \
-  board/pin_mux.c \
-  Project_Settings/Startup_Code/startup_s32K144.S \
-  SDK/platform/devices/S32K144/startup/system_S32K144.c \
-  SDK/platform/devices/startup.c \
-  SDK/platform/drivers/src/clock/S32K1xx/clock_S32K1xx.c \
-  SDK/platform/drivers/src/interrupt/interrupt_manager.c \
-  SDK/platform/drivers/src/pins/pins_driver.c \
-  SDK/platform/drivers/src/pins/pins_port_hw_access.c
+# ==========================
+# Targets
+# ==========================
+.PHONY: all clean
 
-# Tạo file .o từ .c/.S
-OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(filter %.c,$(SRCS)))
-OBJS += $(patsubst %.S, $(BUILD_DIR)/%.o, $(filter %.S,$(SRCS)))
+all: $(BUILD_DIR)/$(TARGET).elf $(BUILD_DIR)/$(TARGET).bin $(BUILD_DIR)/$(TARGET).hex
+	$(SIZE) $(BUILD_DIR)/$(TARGET).elf
 
-# File đầu ra
-ELF = $(BUILD_DIR)/$(TARGET).elf
-BIN = $(BUILD_DIR)/$(TARGET).bin
-HEX = $(BUILD_DIR)/$(TARGET).hex
+# --- Build dependency: các module + startup phải được build trước khi link ---
+$(BUILD_DIR)/$(TARGET).elf: board/.built src/.built SDK/.built $(MODULE_OBJS) $(STARTUP_OBJ)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -o $@ $(MODULE_OBJS) $(STARTUP_OBJ) $(LDFLAGS)
 
-# Luật chính
-all: $(ELF) $(HEX) $(BIN)
-	$(SIZE) $(ELF)
+# Rule build file Assembly startup
+$(STARTUP_OBJ): $(STARTUP_SRC)
+	@mkdir -p $(dir $@)
+	$(CC) $(ASFLAGS) -c $< -o $@
 
-# Build ELF
-$(ELF): $(OBJS)
-	$(CC) $(CFLAGS) $(INCLUDES) $(OBJS) -T $(LDSCRIPT) -Wl,--gc-sections -lnosys -o $@
+# Đặt flag .built cho từng module
+board/.built:
+	$(MAKE) -C board
+	@echo "done" > $@
 
-# Tạo HEX và BIN
-$(HEX): $(ELF)
-	$(OBJCOPY) -O ihex $< $@
+src/.built:
+	$(MAKE) -C src
+	@echo "done" > $@
 
-$(BIN): $(ELF)
+SDK/.built:
+	$(MAKE) -C SDK
+	@echo "done" > $@
+
+# BIN từ ELF
+$(BUILD_DIR)/$(TARGET).bin: $(BUILD_DIR)/$(TARGET).elf
 	$(OBJCOPY) -O binary $< $@
 
-# Build file .c
-$(BUILD_DIR)/%.o: %.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
+# HEX từ ELF
+$(BUILD_DIR)/$(TARGET).hex: $(BUILD_DIR)/$(TARGET).elf
+	$(OBJCOPY) -O ihex $< $@
 
-# Build file .S
-$(BUILD_DIR)/%.o: %.S
-	@mkdir -p $(dir $@)
-	$(CC) $(ASFLAGS) $(INCLUDES) -c $< -o $@
-
-# Dọn dẹp
+# Dọn dẹp toàn bộ
 clean:
 	rm -rf $(BUILD_DIR)
-
-# Nạp chương trình
-flash: $(BIN)
-	pyocd flash $(BIN)
-
-.PHONY: all clean flash
+	rm -f $(MODULE_OBJS) $(STARTUP_OBJ)
+	rm -f board/.built src/.built SDK/.built

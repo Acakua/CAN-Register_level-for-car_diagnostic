@@ -10,8 +10,8 @@
 #define UDS_SERVICE_ECU_RESET                0x11
 #define UDS_SERVICE_READ_DID                 0x22
 #define UDS_SERVICE_WRITE_DID                0x2E
-#define UDS_SERVICE_CLEAR_DTC                0x14
-#define UDS_SERVICE_READ_DTC_INFORMATION     0x19
+#define UDS_SERVICE_CLEAR_DTC                0x14   
+#define UDS_SERVICE_READ_DTC_INFORMATION     0x19   
 
 /* === NRC (Negative Response Codes) ===== */
 #define NRC_SERVICE_NOT_SUPPORTED        0x11
@@ -33,7 +33,7 @@
 #define SECURITY_LEVEL_ENGINE   1
 
 /* ===== Global Variables ===== */
-extern uint8_t currentSecurityLevel;
+extern uint8_t  currentSecurityLevel;
 extern uint16_t engineTemp;
 
 /* --- Service 0x19 Sub-functions --- */
@@ -49,29 +49,29 @@ extern uint16_t engineTemp;
 #define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
 #define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
 
-/**
- * @brief Main handler for UDS Service 0x19 (ReadDTCInformation).
- * This function acts as a dispatcher, routing the request to the correct
- * sub-function handler based on the request message.
- * @param requestMsg The incoming CAN message request from the FlexCAN driver.
- */
-void handleReadDTCInformation(const CAN_Message_t *requestMsg);
-
-/**
- * @brief Sends the final UDS response based on the global udsCtx.
- * This single function handles positive (single/multi-frame) and negative responses.
- * It takes no parameters, as all required information is in the context.
- */
+/* ===== Public API ===== */
+void UDS_DispatchService(const CAN_Message_t msg_rx);
 void UDS_SendResponse(void);
 
-/**
- * @brief UDS service dispatcher (router).
- *
- * Routes an incoming UDS request (by Service ID at data[1]) to the proper
- * handler and triggers response transmission.
- *
- * @param msg_rx Received CAN message carrying the UDS request.
- */
-void UDS_DispatchService(const CAN_Message_t msg_rx);
+/* Handlers */
+void handleReadDTCInformation(const CAN_Message_t *requestMsg);           
+void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg);   
 
-#endif /* INC_UDS_H_ */
+void handleECUReset(const CAN_Message_t msg_rx);
+void handleReadDataByIdentifier(const CAN_Message_t msg_rx);
+void handleWriteDataByIdentifier(const CAN_Message_t msg_rx);
+
+/* External dependencies */
+bool isResetConditionOk(void);
+bool isSecurityAccessGranted(uint16_t did);
+bool isConditionOk(uint16_t did);
+bool writeToNVM(uint16_t did, uint16_t value);
+
+bool isGroupOfDTCSupported(uint32_t groupOfDTC);
+bool isConditionOkForClear(void);
+bool clearDTCFromNVM(uint32_t groupOfDTC);
+
+uint16_t ReadADCValue(void);
+void ECU_Reset(void);
+
+#endif /* UDS_H_ */

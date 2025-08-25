@@ -62,7 +62,7 @@ static void delay_ms(volatile uint32_t ms) {
  * - No FC parsing, block-size, or true STmin handling (simplified model).
  */
 static void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
-	CAN_Message_t msg;
+  CAN_Message_t msg;
 	msg.canID = TX_MSG_ID_UDS;
 	msg.dlc = 8; /* Both First Frames and Consecutive Frames always use 8-byte DLC. */
 
@@ -80,8 +80,6 @@ static void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length) {
 	bytes_sent += 6;
 
 	/* --- Step 2: Wait for Flow Control (FC) frame from the tester --- */
-    /* A full implementation would parse the FC frame. This simplified version
-       just waits a fixed amount of time, assuming a "ClearToSend" response. */
 	delay_ms(10);
 
 	/* --- Step 3: Send all Consecutive Frames (CF) --- */
@@ -347,8 +345,6 @@ static void sf_reportSupportedDTC(const CAN_Message_t *requestMsg) {
 	udsCtx.payload_len = payload_len;
 }
 
-/* --- Main Service Handler --- */
-
 /**
  * @brief Send a UDS response according to the current udsCtx (POS/NEG/NONE).
  *
@@ -471,6 +467,43 @@ void handleReadDTCInformation(const CAN_Message_t *requestMsg) {
     UDS_SendResponse();
 }
 
+void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg) {
+    udsCtx.sid = UDS_SERVICE_CLEAR_DTC;
+
+    if (requestMsg->dlc != 5 || requestMsg->data[0] != 0x04) {
+        udsCtx.flow = UDS_FLOW_NEG;
+        udsCtx.nrc = NRC_INCORRECT_LENGTH;
+        return;
+    }
+
+    uint32_t groupOfDTC =
+        ((uint32_t)requestMsg->data[2] << 16) |
+        ((uint32_t)requestMsg->data[3] << 8)  |
+         (uint32_t)requestMsg->data[4];
+
+    if (!isGroupOfDTCSupported(groupOfDTC)) {
+        udsCtx.flow = UDS_FLOW_NEG;
+        udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+        return;
+    }
+
+    if (!isConditionOkForClear()) {
+        udsCtx.flow = UDS_FLOW_NEG;
+        udsCtx.nrc = NRC_CONDITIONS_NOT_CORRECT;
+        return;
+    }
+
+    if (!clearDTCFromNVM(groupOfDTC)) {
+        udsCtx.flow = UDS_FLOW_NEG;
+        udsCtx.nrc = NRC_GENERAL_PROGRAMMING_FAILURE;
+        return;
+    }
+
+    /* Positive: no payload for 0x14 */
+    udsCtx.flow = UDS_FLOW_POS;
+    udsCtx.payload = NULL;
+    udsCtx.payload_len = 0;
+}
 /**
  * @brief Dispatch a UDS request to the service-specific handler and send a response.
  *
@@ -503,20 +536,24 @@ void UDS_DispatchService(const CAN_Message_t msg_rx) {
 
 	/* reset context */
 	udsCtx.flow = UDS_FLOW_NONE;
-	udsCtx.sid = sid;
-	udsCtx.nrc = 0;
+  udsCtx.sid  = sid;
+  udsCtx.nrc  = 0;
+  udsCtx.payload = NULL;
+  udsCtx.payload_len = 0;
 
 	switch (sid) {
-	case UDS_SERVICE_READ_DTC_INFORMATION:
-		handleReadDTCInformation(&msg_rx);
-		break;
-    case UDS_SERVICE_CLEAR_DTC:
-        handleClearDiagnosticInformation(&msg_rx);
-        break;
-	default:
-		udsCtx.flow = UDS_FLOW_NEG;
-		udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;
-		break;
-	}
+      case UDS_SERVICE_READ_DTC_INFORMATION:
+          handleReadDTCInformation(&msg_rx);
+          break;
+
+      case UDS_SERVICE_CLEAR_DTC:
+          handleClearDiagnosticInformation(&msg_rx);
+          break;
+
+      default:
+          udsCtx.flow = UDS_FLOW_NEG;
+          udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;
+          break;
+  }
 	UDS_SendResponse();
 }

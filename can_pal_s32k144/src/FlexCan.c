@@ -120,7 +120,6 @@ void FLEXCAN0_transmit_msg(const CAN_Message_t *msg) {
     // Step 8: Clear TX completion flag
     CAN0->IFLAG1 = (1 << TX_MB_INDEX);
 }
-
 /**
  * @brief Receive a CAN frame from FlexCAN0 RX mailbox.
  *
