@@ -3,17 +3,18 @@
 #include <string.h>
 #include "nvm.h"
 
-// ==== Global Variables ====
-
 /** Current security level (used for access checks in UDS services) */
 uint8_t  currentSecurityLevel = SECURITY_LEVEL_ENGINE;
 
 /** Threshold engine temperature (example DID value) */
 uint16_t engineTemp           = 0x1234;
 
+extern volatile uint16_t temperature;
+extern volatile uint16_t light_level;
 
-
-// ==== UDS Context Types ====
+extern uint16_t temp_threshold_low;
+extern uint16_t temp_threshold_medium;
+extern uint16_t temp_threshold_high;
 
 /**
  * @brief UDS response flow state
@@ -49,9 +50,6 @@ typedef struct {
 /** Global context used across service handlers */
 static UDS_Context udsCtx;
 
-
-// ==== Utility Functions ====
-
 /**
  * @brief Simple busy-wait delay (optional)
  *
@@ -60,14 +58,81 @@ static UDS_Context udsCtx;
 static void delay_ms(volatile uint32_t ms) {
     volatile uint32_t i, j;
     for (i = 0; i < ms; i++) {
-        for (j = 0; j < 5000; j++) { 
+        for (j = 0; j < 5000; j++) { /* Adjust factor to match clock speed */
             __asm__("nop");
         }
     }
 }
 
+/**
+ * @brief Clear DTC(s) from NVM based on the GroupOfDTC parameter.
+ *
+ * @param groupOfDTC 24-bit DTC group identifier (0xFFFFFF = all DTCs).
+ * @return true if all targeted DTC(s) were successfully erased, false otherwise.
+ */
+static bool clearDTCFromNVM(uint32_t groupOfDTC) {
+    uint8_t erased[DTC_SLOT_SIZE];
+    memset(erased, 0xFF, DTC_SLOT_SIZE); // 0xFF = "empty" state
 
+    // === Case 1: Clear ALL stored DTCs ===
+    if (groupOfDTC == 0xFFFFFF) {
+        bool cleared = true;
+        for (uint8_t i = 0; i < DTC_GetCount(); i++) {
+            uint32_t offset = DTC_REGION_OFFSET + (i * DTC_SLOT_SIZE);
+            if (NVM_Erase(offset, DTC_SLOT_SIZE) != NVM_OK) {
+                cleared = false; // Mark failure but continue erasing others
+            }
+        }
+        return cleared;
+    }
+
+    // === Case 2: Clear a specific single DTC ===
+    int8_t index = DTC_Find(groupOfDTC);
+    if (index != -1) {
+        uint32_t offset = DTC_REGION_OFFSET + (index * DTC_SLOT_SIZE);
+
+        // Only erase this DTC slot without touching others
+        if (NVM_Erase(offset, DTC_SLOT_SIZE) == NVM_OK) {
+            return true; // Success
+        } else {
+            return false; // Failed to erase this slot
+        }
+    }
+
+    // === Case 3: DTC not found ===
+    // Per UDS ISO 14229, if the requested DTC is not present,
+    // it is still considered a successful clear operation.
+    return true;
+}
+
+/**
+ * @brief Checks if a requested GroupOfDTC is supported by the ECU.
+ */
+static bool isGroupOfDTCSupported(uint32_t groupOfDTC) {
+    // 0xFFFFFF = clear all DTCs
+    if (groupOfDTC == 0xFFFFFF) return true;
+
+    switch (groupOfDTC) {
+        case DTC_ENGINE_OVERHEAT:
+            return true;
+        // TODO: Add more supported groups here
+        default:
+            return false;
+    }
+}
+
+/**
+ * @brief Verifies conditions before allowing DTC clearing.
+ * @return true if clearing is allowed, false otherwise.
+ */
+static bool isConditionOkForClear(void) {
+    // Example: Could check if ignition is ON, battery voltage OK, etc.
+    return true;
+}
+
+// =====================================================
 // ==== UDS Dispatcher ====
+// =====================================================
 
 /**
  * @brief Dispatches an incoming UDS request to the correct service handler.
@@ -103,27 +168,28 @@ void UDS_DispatchService(const CAN_Message_t msg_rx) {
     udsCtx.payload     = NULL;
     udsCtx.payload_len = 0;
 
-    switch (sid) {
-    case UDS_SERVICE_ECU_RESET:
-        handleECUReset(msg_rx);
-        break;
-    case UDS_SERVICE_WRITE_DID:
-        handleWriteDataByIdentifier(msg_rx);
-        break;
-    case UDS_SERVICE_READ_DID:
-        handleReadDataByIdentifier(msg_rx);
-        break;
-    default:
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc  = NRC_SERVICE_NOT_SUPPORTED;
-        break;
-    }
+	switch (sid) {
+	case UDS_SERVICE_ECU_RESET:
+		handleECUReset(msg_rx);
+		break;
+	case UDS_SERVICE_WRITE_DID:
+		handleWriteDataByIdentifier(msg_rx);
+		break;
+	case UDS_SERVICE_READ_DID:
+		handleReadDataByIdentifier(msg_rx);
+		break;
+	default:
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_SERVICE_NOT_SUPPORTED;
+		break;
+	}
 
     UDS_SendResponse();
 }
 
-
+// =====================================================
 // ==== UDS Response Sender ====
+// =====================================================
 
 /**
  * @brief Transmits a UDS response frame based on udsCtx state.
@@ -345,8 +411,9 @@ void handleECUReset(const CAN_Message_t msg_rx) {
 
 }
 
-
+// =====================================================
 // ==== WriteDataByIdentifier Handler (SID 0x2E) ====
+// =====================================================
 
 /**
  * @brief Handles WriteDataByIdentifier (SID = 0x2E).
@@ -388,18 +455,40 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
     }
 
     uint16_t did = (msg_rx.data[2] << 8) | msg_rx.data[3];
+    const uint8_t *data_payload = &msg_rx.data[4];
+    uint16_t data_len = msg_rx.dlc - 3; /* dlc = 1(len) + 1(sid) + 2(did) + n(data) -> len = dlc - 4 */
 
-    if (did != DID_THRESHOLD) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc  = NRC_REQUEST_OUT_OF_RANGE;
-        return;
-    }
+    uint32_t nvm_offset;
+    uint8_t expected_len;
 
-    if (msg_rx.dlc >= 7) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc  = NRC_INCORRECT_LENGTH;
-        return;
-    }
+    switch (did) {
+		case DID_VEHICLE_ID:
+			nvm_offset = DID_VEHICLE_ID_OFFSET;
+			expected_len = 4;
+			break;
+		case DID_TEMP_THRESHOLD_LOW:
+			nvm_offset = DID_TEMP_THRESHOLD_LOW_OFFSET;
+			expected_len = 2;
+			break;
+		case DID_TEMP_THRESHOLD_MEDIUM:
+			nvm_offset = DID_TEMP_THRESHOLD_MEDIUM_OFFSET;
+			expected_len = 2;
+			break;
+		case DID_TEMP_THRESHOLD_HIGH:
+			nvm_offset = DID_TEMP_THRESHOLD_HIGH_OFFSET;
+			expected_len = 2;
+			break;
+		default:
+			udsCtx.flow = UDS_FLOW_NEG;
+			udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+			return;
+	}
+
+    if (data_len != (expected_len + 1)) {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_INCORRECT_LENGTH;
+		return;
+	}
 
     if (!isSecurityAccessGranted(did)) {
         udsCtx.flow = UDS_FLOW_NEG;
@@ -413,30 +502,41 @@ void handleWriteDataByIdentifier(const CAN_Message_t msg_rx) {
         return;
     }
 
-    uint16_t newVal = (msg_rx.data[4] << 8) | msg_rx.data[5];
-    if (newVal >= 4096) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc  = NRC_REQUEST_OUT_OF_RANGE;
-        return;
+    /* Prepare data to write */
+    uint8_t buffer[8];
+    if (expected_len == 4) {
+    	uint32_t temp_value_32 = ((uint32_t)data_payload[0] << 24) |
+                              ((uint32_t)data_payload[1] << 16) |
+                              ((uint32_t)data_payload[2] << 8)  |
+                              ((uint32_t)data_payload[3]);
+    	memcpy(buffer, &temp_value_32, 4);
+    } else if (expected_len == 2) {
+    	uint16_t temp_value_16 = ((uint16_t)data_payload[0] << 8) |
+    	                       ((uint16_t)data_payload[1]);
+    	memcpy(buffer, &temp_value_16, 2);
     }
+	if (NVM_Write(nvm_offset, buffer, expected_len) == NVM_OK) {
+		uint16_t new_value = (buffer[1] << 8) | buffer[0];
+		/* Update threshold variable after write to NVM */
+		if (did == DID_TEMP_THRESHOLD_LOW)
+			temp_threshold_low = new_value;
+		if (did == DID_TEMP_THRESHOLD_MEDIUM)
+			temp_threshold_medium = new_value;
+		if (did == DID_TEMP_THRESHOLD_HIGH)
+			temp_threshold_high = new_value;
 
-    if (!writeToNVM(did, newVal)) {
-        udsCtx.flow = UDS_FLOW_NEG;
-        udsCtx.nrc  = NRC_GENERAL_PROGRAMMING_FAILURE;
-        return;
-    }
-
-    // Build POS payload
-    static uint8_t payload[2];
-    payload[0] = msg_rx.data[2];
-    payload[1] = msg_rx.data[3];
-
-    udsCtx.flow        = UDS_FLOW_POS;
-    udsCtx.payload     = payload;
-    udsCtx.payload_len = 2;
+		/* Positive response */
+		static uint8_t payload[2];
+		payload[0] = msg_rx.data[2];
+		payload[1] = msg_rx.data[3];
+		udsCtx.flow = UDS_FLOW_POS;
+		udsCtx.payload = payload;
+		udsCtx.payload_len = 2;
+	} else {
+		udsCtx.flow = UDS_FLOW_NEG;
+		udsCtx.nrc = NRC_GENERAL_PROGRAMMING_FAILURE;
+	}
 }
-
-// ==== ReadDataByIdentifier Handler (SID 0x22) ====
 
 /**
  * @brief Handles ReadDataByIdentifier (SID = 0x22).
@@ -473,7 +573,6 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
 		return;
 	}
 
-
     if (msg_rx.dlc < 4 || (msg_rx.dlc % 2) != 0) {
         udsCtx.flow = UDS_FLOW_NEG;
         udsCtx.nrc  = NRC_INCORRECT_LENGTH;
@@ -484,39 +583,65 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
     uint16_t payload_len = 0;
 
     for (uint8_t i = 2; i < msg_rx.dlc; i += 2) {
-        uint16_t did = (msg_rx.data[i] << 8) | msg_rx.data[i + 1];
+		uint16_t did = (msg_rx.data[i] << 8) | msg_rx.data[i + 1];
 
-        if (did == DID_ENGINE_TEMP || did == DID_THRESHOLD || did == DID_ENGINE_LIGHT) {
-            if (payload_len + 4 > sizeof(response_payload)) {
-                udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc  = NRC_RESPONSE_TOO_LONG;
-                return;
-            }
-            if (!isSecurityAccessGranted(did)) {
-                udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc  = NRC_SECURITY_ACCESS_DENIED;
-                return;
-            }
-            if (!isConditionOk(did)) {
-                udsCtx.flow = UDS_FLOW_NEG;
-                udsCtx.nrc  = NRC_CONDITIONS_NOT_CORRECT;
-                return;
-            }
+		if (payload_len + 4 > sizeof(response_payload)) {
+			udsCtx.flow = UDS_FLOW_NEG;
+			udsCtx.nrc = NRC_RESPONSE_TOO_LONG;
+			return;
+		}
+		if (!isSecurityAccessGranted(did)) {
+			udsCtx.flow = UDS_FLOW_NEG;
+			udsCtx.nrc = NRC_SECURITY_ACCESS_DENIED;
+			return;
+		}
+		if (!isConditionOk(did)) {
+			udsCtx.flow = UDS_FLOW_NEG;
+			udsCtx.nrc = NRC_CONDITIONS_NOT_CORRECT;
+			return;
+		}
 
-            uint16_t value;
-            if (did == DID_ENGINE_TEMP) {
-                value = myADC_Read(13);
-            } else if (did == DID_ENGINE_LIGHT) {
-                value = myADC_Read(12);
-            } else {
-                value = engineTemp;
-            }
+		response_payload[payload_len++] = (uint8_t) (did >> 8);
+		response_payload[payload_len++] = (uint8_t) did;
 
-            response_payload[payload_len++] = (uint8_t)(did >> 8);
-            response_payload[payload_len++] = (uint8_t)(did & 0xFF);
-            response_payload[payload_len++] = (uint8_t)(value >> 8);
-            response_payload[payload_len++] = (uint8_t)(value & 0xFF);
-        }
+		switch (did) {
+			case DID_ENGINE_TEMP: {
+				response_payload[payload_len++] = (uint8_t) (temperature >> 8);
+				response_payload[payload_len++] = (uint8_t) temperature;
+				break;
+			}
+			case DID_VEHICLE_ID: {
+				uint32_t vid_val;
+				NVM_Read(DID_VEHICLE_ID_OFFSET, (uint8_t*) &vid_val, 4);
+				response_payload[payload_len++] = (uint8_t) (vid_val >> 24);
+				response_payload[payload_len++] = (uint8_t) (vid_val >> 16);
+				response_payload[payload_len++] = (uint8_t) (vid_val >> 8);
+				response_payload[payload_len++] = (uint8_t) vid_val;
+				break;
+			}
+			case DID_TEMP_THRESHOLD_LOW: {
+				response_payload[payload_len++] =
+						(uint8_t) (temp_threshold_low >> 8);
+				response_payload[payload_len++] = (uint8_t) temp_threshold_low;
+				break;
+			}
+			case DID_TEMP_THRESHOLD_MEDIUM: {
+				response_payload[payload_len++] = (uint8_t) (temp_threshold_medium
+						>> 8);
+				response_payload[payload_len++] = (uint8_t) temp_threshold_medium;
+				break;
+			}
+			case DID_TEMP_THRESHOLD_HIGH: {
+				response_payload[payload_len++] = (uint8_t) (temp_threshold_high
+						>> 8);
+				response_payload[payload_len++] = (uint8_t) temp_threshold_high;
+				break;
+			}
+			default:
+				udsCtx.flow = UDS_FLOW_NEG;
+				udsCtx.nrc = NRC_REQUEST_OUT_OF_RANGE;
+				return;
+		}
     }
 
     if (payload_len == 0) {
@@ -530,8 +655,9 @@ void handleReadDataByIdentifier(const CAN_Message_t msg_rx) {
     udsCtx.payload_len = payload_len;
 }
 
-
+// =====================================================
 // ==== Helpers & Stubs ====
+// =====================================================
 
 /**
  * @brief Checks if ECU reset conditions are OK.
@@ -544,6 +670,8 @@ bool isResetConditionOk(void) { return true; }
 /**
  * @brief Checks if the given DID has security access granted.
  *
+ * In real implementation, depends on currentSecurityLevel.
+ * In demo: always returns true.
  */
 bool isSecurityAccessGranted(uint16_t did) {
     (void)did;
@@ -553,53 +681,17 @@ bool isSecurityAccessGranted(uint16_t did) {
 /**
  * @brief Checks if the given DID can be accessed under current conditions.
  *
+ * In real ECU, could depend on ignition state, operating mode, etc.
+ * In demo: always returns true.
  */
 bool isConditionOk(uint16_t did) {
     (void)did;
     return true;
 }
 
-/**
- * @brief Writes a value to NVM for a specific DID.
- *
- * This function uses the memory layout defined in nvm.h to determine
- * the correct address to write to. It supports writing various DID types and can be
- * easily extended.
- *
- * @param did   The Data Identifier to be written.
- * @param value The value to be stored.
- * @return true on successful write, false on failure or if the DID is not supported.
- */
-bool writeToNVM(uint16_t did, uint16_t value) {
-    uint32_t offset;
-
-    // 1. Determine the correct NVM offset based on the DID.
-    switch (did) {
-        case DID_THRESHOLD:
-            offset = DID_ENGINE_TEMP_NVM_OFFSET;
-            break;
-        // DID others
-
-        default:
-            // This DID is not supported for writing.
-            return false;
-    }
-
-    // 2. Prepare the 16-bit value as a 2-byte array for NVM writing.
-    uint8_t data_to_write[2];
-    data_to_write[0] = (uint8_t)(value >> 8);   // High Byte
-    data_to_write[1] = (uint8_t)(value & 0xFF); // Low Byte
-
-    // 3. Call the NVM driver to perform the write operation.
-    if (NVM_Write(offset, data_to_write, 2) == NVM_OK) {
-        return true; // Write successful!
-    } else {
-        return false; // NVM write failed.
-    }
-}
-
-
+// =====================================================
 // ==== ECU Reset implementation ====
+// =====================================================
 
 #define SCB_AIRCR               (*(volatile uint32_t*)0xE000ED0C)
 #define SCB_AIRCR_VECTKEY_MASK  (0x5FAu << 16)
