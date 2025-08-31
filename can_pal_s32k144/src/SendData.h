@@ -28,5 +28,4 @@ void CAN_SENDER_Init(void);
  * - Sends the data via CAN bus
  */
 extern void LPIT0_Ch0_IRQHandler(void);
-
 #endif /* SENDDATA_H */

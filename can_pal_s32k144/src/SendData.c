@@ -4,21 +4,23 @@
 #include "lpit_driver.h"
 #include "adc.h"
 #include "interrupt_manager.h"
+#include <stdbool.h>
 
 /* ================================
  * Global / Static Variables
  * ================================
  */
 
-/** Fan ON/OFF state (toggled every CAN message) */
-static uint8_t fan_state = 0;
-/** Headlight ON/OFF state (toggled every CAN message) */
-static uint8_t headlight_state = 0;
+/* Fan ON/OFF state from main */
+extern volatile uint8_t fan_state;
+/* Headlight ON/OFF state from main */
+extern volatile uint8_t light_state;
 
-/** Latest temperature sensor reading (ADC channel 13) */
-static uint16_t temperature = 0;
-/** Latest light sensor reading (ADC channel 12) */
-static uint16_t light_level = 0;
+/* Temperature after reading from ADC (Channel 13) */
+extern volatile uint16_t temperature;
+
+/* Light level after reading from ADC (Channel 13) */
+extern volatile uint16_t light_level;
 
 /* External LPIT configuration (defined elsewhere) */
 extern const lpit_user_config_t lpit1_InitConfig;
@@ -82,28 +84,20 @@ void CAN_SENDER_Init(void)
  */
 void LPIT0_Ch0_IRQHandler(void)
 {
-    /* Clear interrupt flag */
-    LPIT_DRV_ClearInterruptFlagTimerChannels(INST_LPIT_CONFIG_1, 0);
+	/* Clear interrupt flag */
+	LPIT_DRV_ClearInterruptFlagTimerChannels(INST_LPIT_CONFIG_1, (1U << 0));
 
-    /* Read sensor data from ADC channels */
-    temperature = myADC_Read(13);
-    light_level = myADC_Read(12);
+	/* Prepare CAN message */
+	CAN_Message_t tx_msg;
+	tx_msg.canID = 0x200; /* CAN identifier */
+	tx_msg.dlc = 6; /* Data length code = 6 bytes */
+	tx_msg.data[0] = fan_state;
+	tx_msg.data[1] = light_state;
+	tx_msg.data[2] = (uint8_t) (temperature >> 8); /* High byte */
+	tx_msg.data[3] = (uint8_t) temperature; /* Low byte */
+	tx_msg.data[4] = (uint8_t) (light_level >> 8); /* High byte */
+	tx_msg.data[5] = (uint8_t) light_level; /* Low byte */
 
-    /* Prepare CAN message */
-    CAN_Message_t tx_msg;
-    tx_msg.canID = 0x200;       /* CAN identifier */
-    tx_msg.dlc = 6;             /* Data length code = 6 bytes */
-    tx_msg.data[0] = fan_state;
-    tx_msg.data[1] = headlight_state;
-    tx_msg.data[2] = (uint8_t)(temperature >> 8); /* High byte */
-    tx_msg.data[3] = (uint8_t)temperature;        /* Low byte */
-    tx_msg.data[4] = (uint8_t)(light_level >> 8); /* High byte */
-    tx_msg.data[5] = (uint8_t)light_level;        /* Low byte */
-
-    /* Transmit message via CAN */
-    FLEXCAN0_transmit_msg(&tx_msg);
-
-    /* Toggle fan and headlight states */
-    fan_state = !fan_state;
-    headlight_state = !headlight_state;
+	/* Transmit message via CAN */
+	FLEXCAN0_transmit_msg(&tx_msg);
 }

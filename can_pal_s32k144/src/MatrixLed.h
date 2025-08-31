@@ -1,76 +1,82 @@
 #ifndef MATRIXLED_H_
 #define MATRIXLED_H_
 
-#include "S32K144.h"
 #include <stdint.h>
+#include <stdbool.h>
 
-/* ================================
- * GPIO Pin Configuration for Matrix LED (MAX7219)
- * ================================
- */
-
-#define MATRIXLED_DIN_PIN        1
-#define MATRIXLED_CS_PIN         0
-#define MATRIXLED_CLK_PIN        2
-
-/* ================================
- * MAX7219 Register Addresses
- * ================================
- */
-
-/** No operation (used for daisy-chained devices) */
-#define MATRIXLED_REG_NOOP       0x00
-#define MATRIXLED_REG_DIGIT0     0x01
-#define MATRIXLED_REG_DIGIT1     0x02
-#define MATRIXLED_REG_DIGIT2     0x03
-#define MATRIXLED_REG_DIGIT3     0x04
-#define MATRIXLED_REG_DIGIT4     0x05
-#define MATRIXLED_REG_DIGIT5     0x06
-#define MATRIXLED_REG_DIGIT6     0x07
-#define MATRIXLED_REG_DIGIT7     0x08
-/** Decode mode register (set BCD decode on/off) */
-#define MATRIXLED_REG_DECODEMODE 0x09
-/** Intensity register (set display brightness) */
-#define MATRIXLED_REG_INTENSITY  0x0A
-/** Scan limit register (set number of digits/rows displayed) */
-#define MATRIXLED_REG_SCANLIMIT  0x0B
-/** Shutdown register (normal operation / shutdown mode) */
-#define MATRIXLED_REG_SHUTDOWN   0x0C
-/** Display test register (turn on all LEDs for testing) */
-#define MATRIXLED_REG_DISPLAYTEST 0x0F
-
-/* ================================
- * Function Prototypes
- * ================================
- */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * @brief Initialize the MAX7219 LED driver.
- *
- * This function configures GPIO pins and sends initialization commands
- * to the MAX7219 (decode mode, intensity, scan limit, shutdown).
+ * @brief Initializes the MAX7219 driver and the underlying SPI communication.
+ * @details This function sets up the SPI peripheral and configures the MAX7219
+ * with default parameters: no-decode mode, full scan limit (8 digits),
+ * medium brightness, and normal operation mode (not shutdown or display test).
+ * It also clears the display buffer.
  */
 void MatrixLed_Init(void);
 
 /**
- * @brief Send a command to MAX7219.
- *
- * @param address Register address (e.g., MATRIXLED_REG_DIGIT0).
- * @param data    Data to be written into the register.
+ * @brief Sets the brightness of the entire LED matrix.
+ * @param brightnessLevel The desired brightness level. Valid values are 0 (dimmest) to 15 (brightest).
+ * Values outside this range will be clamped.
  */
-void MatrixLed_Send(uint8_t address, uint8_t data);
+void MatrixLed_SetBrightness(uint8_t brightnessLevel);
 
 /**
- * @brief Clear the LED matrix (turn off all LEDs).
+ * @brief Sets the number of columns (digits) to be scanned and displayed.
+ * @details For an 8x8 matrix, this should typically be set to 7 (for 8 digits, 0-7).
+ * Setting a lower limit can be used to disable parts of the display and reduce power.
+ * @param scanLimit The number of digits to display, from 0 (1 digit) to 7 (8 digits).
+ * Values greater than 7 will be clamped to 7.
+ */
+void MatrixLed_SetScanLimit(uint8_t scanLimit);
+
+/**
+ * @brief Puts the MAX7219 into shutdown mode or brings it back to normal operation.
+ * @details In shutdown mode, the display is turned off and power consumption is minimized.
+ * The display buffer content is retained and will be shown again upon exiting shutdown.
+ * @param enterShutdown Set to 'true' to enter shutdown mode, 'false' for normal operation.
+ */
+void MatrixLed_Shutdown(bool enterShutdown);
+
+/**
+ * @brief Enables or disables the display test mode of the MAX7219.
+ * @details In display test mode, all LEDs are turned on at maximum brightness, overriding
+ * the current brightness setting and display buffer content.
+ * @param enableTestMode Set to 'true' to enable display test, 'false' for normal operation.
+ */
+void MatrixLed_DisplayTest(bool enableTestMode);
+
+/**
+ * @brief Clears the internal display buffer and turns off all LEDs on the matrix.
+ * @details This function writes zeros to all 8 rows of the internal buffer and then
+ * transmits these zeros to all 8 digit registers of the MAX7219.
  */
 void MatrixLed_Clear(void);
 
 /**
- * @brief Display a matrix pattern.
- *
- * @param data Pointer to an array of 8 bytes, where each byte
- *             represents a row of the LED matrix (8x8).
+ * @brief Loads a full 8x8 image from a buffer into the matrix display.
+ * @details The buffer represents the entire 8x8 matrix, where each byte corresponds
+ * to a column (x-coordinate).
+ * @param frameBuffer A pointer to an 8-byte array. `frameBuffer[x]` holds the 8-bit pattern
+ * for column `x`, where bit `y` corresponds to the LED at (x, y).
  */
-void MatrixLed_DisplayMatrix(uint8_t *data);
+void MatrixLed_Load(const uint8_t frameBuffer[8]);
+
+/**
+ * @brief Turns a single pixel on or off at a specified coordinate.
+ * @details This function modifies the internal display buffer and then sends the
+ * updated column data to the MAX7219.
+ * @param x The horizontal coordinate (column) of the pixel (0-7).
+ * @param y The vertical coordinate (row) of the pixel (0-7).
+ * @param isOn Set to 'true' to turn the pixel on, 'false' to turn it off.
+ */
+void MatrixLed_DrawPixel(uint8_t x, uint8_t y, bool isOn);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* MATRIXLED_H_ */
