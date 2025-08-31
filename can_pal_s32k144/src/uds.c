@@ -467,7 +467,6 @@ void handleReadDTCInformation(const CAN_Message_t *requestMsg) {
             udsCtx.nrc = NRC_SUBFUNC_NOT_SUPPORTED;
             break;
     }
-    UDS_SendResponse();
 }
 
 void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg) {
