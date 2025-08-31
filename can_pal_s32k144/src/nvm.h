@@ -8,7 +8,7 @@
 /* --- Configuration --- */
 #define NVM_START_ADDRESS   (0x14000000U) /* Standard start address for FlexNVM on S32K144 */
 #define NVM_SIZE            (4096U)       /* EEPROM size = 4 Kbytes, as per your spec */
-#define DID_COUNT           (2U)          /* Number of Data Identifiers supported */
+#define DID_COUNT           (5U)          /* Number of Data Identifiers supported */
 #define DTC_COUNT           (5U)          /* Number of Diagnostic Trouble Codes that can be stored */
 #define DID_MAX_SIZE        (8U)          /* Max size in bytes for a single DID record */
 #define DTC_SLOT_SIZE       (32U)         /* Reserved size in bytes for a single DTC record in NVM */
@@ -23,9 +23,10 @@
 
 /* Defines the storage offset for each DID within the NVM's DID region. */
 /* Each slot is spaced by DID_MAX_SIZE to prevent data collision. */
-#define DID_ENGINE_TEMP_NVM_OFFSET    (DID_REGION_OFFSET + (0 * DID_MAX_SIZE))
-#define DID_ENGINE_LIGHT_NVM_OFFSET   (DID_REGION_OFFSET + (1 * DID_MAX_SIZE))
-#define DID_THRESHOLD_NVM_OFFSET      (DID_REGION_OFFSET + (2 * DID_MAX_SIZE))
+#define DID_VEHICLE_ID_OFFSET             (DID_REGION_OFFSET + (0 * DID_MAX_SIZE))
+#define DID_TEMP_THRESHOLD_LOW_OFFSET     (DID_REGION_OFFSET + (1 * DID_MAX_SIZE))
+#define DID_TEMP_THRESHOLD_MEDIUM_OFFSET  (DID_REGION_OFFSET + (2 * DID_MAX_SIZE))
+#define DID_TEMP_THRESHOLD_HIGH_OFFSET    (DID_REGION_OFFSET + (3 * DID_MAX_SIZE))
 
 
 /**
