@@ -1,5 +1,10 @@
-#ifndef NVM_H_
-#define NVM_H_
+/*
+ * @brief  Header file for the Non-Volatile Memory (NVM) abstraction layer.
+ * This module provides a simple interface for reading from and writing to
+ * the S32K144's emulated EEPROM over FlexNVM.
+ */
+#ifndef INC_NVM_H_
+#define INC_NVM_H_
 
 #include <stdint.h>
 #include <stddef.h>
@@ -65,4 +70,4 @@ NVM_Status NVM_Write(uint32_t offset, const uint8_t *data, uint8_t len);
  */
 NVM_Status NVM_Erase(uint32_t offset, uint32_t len);
 
-#endif /* NVM_H_ */
+#endif /* INC_NVM_H_ */

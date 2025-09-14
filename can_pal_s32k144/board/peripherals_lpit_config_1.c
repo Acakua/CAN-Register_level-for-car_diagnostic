@@ -22,42 +22,41 @@ functionalGroups:
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "peripherals_adc_config_1.h"
+#include "peripherals_lpit_config_1.h"
 
 /*******************************************************************************
- * adc_config_1 initialization code
+ * lpit_config_1 initialization code
  ******************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'adc_config_1'
-- type: 'adc_config'
+- name: 'lpit_config_1'
+- type: 'lpit_config'
 - mode: 'general'
 - custom_name_enabled: 'false'
-- type_id: 'adc'
+- type_id: 'lpit'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'ADC_0'
+- peripheral: 'LPIT_0'
 - config_sets:
-  - adc:
-    - adcConverterCfg:
+  - lpit:
+    - lpitConfig:
+      - name: 'lpit1_InitConfig'
+      - enableRunInDebug: 'true'
+      - enableRunInDoze: 'false'
+    - lpitChannelConfig:
       - 0:
-        - name: 'adc_config_1_ConvConfig0'
-        - readonly: 'true'
-        - clockDivide: 'ADC_CLK_DIVIDE_4'
-        - sampleTime: '255'
-        - resolution: 'ADC_RESOLUTION_12BIT'
-        - inputClock: 'ADC_CLK_ALT_1'
-        - trigger: 'ADC_TRIGGER_SOFTWARE'
-        - pretriggerSel: 'ADC_PRETRIGGER_SEL_PDB'
-        - triggerSel: 'ADC_TRIGGER_SEL_PDB'
-        - dmaEnable: 'false'
-        - voltageRef: 'ADC_VOLTAGEREF_VREF'
-        - continuousConvEnable: 'false'
-        - supplyMonitoringEnable: 'false'
-    - adcCompareCfg: []
-    - adcAverageCfg: []
-    - adcChanCfg: []
-    - quick_selection: 'dv_adc'
+        - name: 'lpit1_ChnConfig0'
+        - cfgReadOnly: 'false'
+        - timerMode: 'LPIT_PERIODIC_COUNTER'
+        - periodUnits: 'LPIT_PERIOD_UNITS_MICROSECONDS'
+        - period: '1000000'
+        - triggerSource: 'LPIT_TRIGGER_SOURCE_INTERNAL'
+        - triggerSelect: '0U'
+        - enableReloadOnTrigger: 'false'
+        - enableStopOnInterrupt: 'false'
+        - enableStartOnTrigger: 'false'
+        - chainChannel: 'false'
+        - isInterruptEnabled: 'true'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
@@ -70,18 +69,24 @@ instance:
  *
  */
 
-const adc_converter_config_t adc_config_1_ConvConfig0 = {
-  .clockDivide = ADC_CLK_DIVIDE_4,
-  .sampleTime = 255U,
-  .resolution = ADC_RESOLUTION_12BIT,
-  .inputClock = ADC_CLK_ALT_1,
-  .trigger = ADC_TRIGGER_SOFTWARE,
-  .pretriggerSel = ADC_PRETRIGGER_SEL_PDB,
-  .triggerSel = ADC_TRIGGER_SEL_PDB,
-  .dmaEnable = false,
-  .voltageRef = ADC_VOLTAGEREF_VREF,
-  .continuousConvEnable = false,
-  .supplyMonitoringEnable = false
+/* lPIT global configuration */
+const lpit_user_config_t  lpit1_InitConfig = {
+  .enableRunInDebug = true,
+  .enableRunInDoze = false
+};
+
+/* Channel configuration 0*/
+lpit_user_channel_config_t  lpit1_ChnConfig0 = {
+  .timerMode = LPIT_PERIODIC_COUNTER,
+  .periodUnits = LPIT_PERIOD_UNITS_MICROSECONDS,
+  .period = 1000000UL,
+  .triggerSource = LPIT_TRIGGER_SOURCE_INTERNAL,
+  .triggerSelect = 0U,
+  .enableReloadOnTrigger = false,
+  .enableStopOnInterrupt = false,
+  .enableStartOnTrigger = false,
+  .chainChannel = false,
+  .isInterruptEnabled = true
 };
 
 
