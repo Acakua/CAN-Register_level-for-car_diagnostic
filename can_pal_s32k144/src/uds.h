@@ -11,7 +11,8 @@
 #define UDS_SERVICE_ECU_RESET                0x11
 #define UDS_SERVICE_READ_DID                 0x22
 #define UDS_SERVICE_WRITE_DID                0x2E
-
+#define UDS_SERVICE_CLEAR_DTC                0x14
+#define UDS_SERVICE_READ_DTC_INFORMATION     0x19
 
 // ===== NRC (Negative Response Codes) =====
 #define NRC_SERVICE_NOT_SUPPORTED        0x11
@@ -61,15 +62,11 @@ void UDS_DispatchService(const CAN_Message_t msg_rx);
 void handleECUReset(const CAN_Message_t msg_rx);
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx);
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx);
+void handleReadDTCInformation(const CAN_Message_t *requestMsg);
+void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg);
 void UDS_SendResponse(void);
-void UDS_SendMultiFrameISO_TP(const uint8_t *data, uint16_t length);
-
-
 
 // External dependencies (must be implemented elsewhere)
-bool isResetConditionOk(void);
-bool isSecurityAccessGranted(uint16_t did);
-bool isConditionOk(uint16_t did);
 void ECU_Reset(void);
 
 #endif
