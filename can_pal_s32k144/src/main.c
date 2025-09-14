@@ -10,7 +10,6 @@
 #include "adc.h"
 
 status_t status;
-
 flash_ssd_config_t flashSSDConfig;
 
 volatile int exit_code = 0;
@@ -22,26 +21,25 @@ void BoardInit(void)
 
     myADC_Init();
 
-	/* Initialize the Flash driver for NVM operations. */
-	status = FLASH_DRV_Init(&Flash_InitConfig0, &flashSSDConfig);
-	DEV_ASSERT(status == STATUS_SUCCESS);
+    /* Initialize the Flash driver for NVM operations. */
+    status = FLASH_DRV_Init(&Flash_InitConfig0, &flashSSDConfig);
+    DEV_ASSERT(status == STATUS_SUCCESS);
 
-	/* Partition FlexNVM for EEPROM emulation if it hasn't been done yet. */
-	if ((FEATURE_FLS_HAS_FLEX_NVM == 1u) && (FEATURE_FLS_HAS_FLEX_RAM == 1u)) {
-		if (flashSSDConfig.EEESize == 0u) {
-			status = FLASH_DRV_DEFlashPartition(&flashSSDConfig, 0x02u, 0x08u,
-					0x0u, false, true);
-			DEV_ASSERT(status == STATUS_SUCCESS);
+    /* Partition FlexNVM for EEPROM emulation if it hasn't been done yet. */
+    if ((FEATURE_FLS_HAS_FLEX_NVM == 1u) && (FEATURE_FLS_HAS_FLEX_RAM == 1u)) {
+        if (flashSSDConfig.EEESize == 0u) {
+            status = FLASH_DRV_DEFlashPartition(&flashSSDConfig, 0x02u, 0x08u, 0x0u, false, true);
+            DEV_ASSERT(status == STATUS_SUCCESS);
 
-			/* Re-initialize driver after partitioning to update its configuration. */
-			status = FLASH_DRV_Init(&Flash_InitConfig0, &flashSSDConfig);
-			DEV_ASSERT(status == STATUS_SUCCESS);
-		}
-	}
-	/* Enable EEPROM emulation functionality. */
-	status = FLASH_DRV_SetFlexRamFunction(&flashSSDConfig, EEE_ENABLE, 0x00u,
-	NULL);
-	DEV_ASSERT(status == STATUS_SUCCESS);
+            /* Re-initialize driver after partitioning to update its configuration. */
+            status = FLASH_DRV_Init(&Flash_InitConfig0, &flashSSDConfig);
+            DEV_ASSERT(status == STATUS_SUCCESS);
+        }
+    }
+
+    /* Enable EEPROM emulation functionality. */
+    status = FLASH_DRV_SetFlexRamFunction(&flashSSDConfig, EEE_ENABLE, 0x00u, NULL);
+    DEV_ASSERT(status == STATUS_SUCCESS);
 }
 
 int main(void)
