@@ -22,42 +22,33 @@ functionalGroups:
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "peripherals_adc_config_1.h"
+#include "peripherals_flash_1.h"
 
 /*******************************************************************************
- * adc_config_1 initialization code
+ * flash_1 initialization code
  ******************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'adc_config_1'
-- type: 'adc_config'
+- name: 'flash_1'
+- type: 'flash'
 - mode: 'general'
 - custom_name_enabled: 'false'
-- type_id: 'adc'
+- type_id: 'flash'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'ADC_0'
+- peripheral: 'FTFC'
 - config_sets:
-  - adc:
-    - adcConverterCfg:
+  - flash_driver:
+    - flashConfig:
       - 0:
-        - name: 'adc_config_1_ConvConfig0'
-        - readonly: 'true'
-        - clockDivide: 'ADC_CLK_DIVIDE_4'
-        - sampleTime: '255'
-        - resolution: 'ADC_RESOLUTION_12BIT'
-        - inputClock: 'ADC_CLK_ALT_1'
-        - trigger: 'ADC_TRIGGER_SOFTWARE'
-        - pretriggerSel: 'ADC_PRETRIGGER_SEL_PDB'
-        - triggerSel: 'ADC_TRIGGER_SEL_PDB'
-        - dmaEnable: 'false'
-        - voltageRef: 'ADC_VOLTAGEREF_VREF'
-        - continuousConvEnable: 'false'
-        - supplyMonitoringEnable: 'false'
-    - adcCompareCfg: []
-    - adcAverageCfg: []
-    - adcChanCfg: []
-    - quick_selection: 'dv_adc'
+        - Configuration: 'Flash_InitConfig0'
+        - readOnly: 'true'
+        - PFlashBase: '0x00000000'
+        - PFlashSize: '0x80000'
+        - DFlashBase: '0x10000000'
+        - EERAMBase: '0x14000000'
+        - CallBack: 'NULL_CALLBACK'
+    - quick_selection: 'flash_default'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
@@ -70,18 +61,14 @@ instance:
  *
  */
 
-const adc_converter_config_t adc_config_1_ConvConfig0 = {
-  .clockDivide = ADC_CLK_DIVIDE_4,
-  .sampleTime = 255U,
-  .resolution = ADC_RESOLUTION_12BIT,
-  .inputClock = ADC_CLK_ALT_1,
-  .trigger = ADC_TRIGGER_SOFTWARE,
-  .pretriggerSel = ADC_PRETRIGGER_SEL_PDB,
-  .triggerSel = ADC_TRIGGER_SEL_PDB,
-  .dmaEnable = false,
-  .voltageRef = ADC_VOLTAGEREF_VREF,
-  .continuousConvEnable = false,
-  .supplyMonitoringEnable = false
+    /* Flash user configuration 0 */
+const flash_user_config_t Flash_InitConfig0 =
+{
+    .PFlashBase = 0x0U,
+    .PFlashSize = 0x80000U,
+    .DFlashBase = 0x10000000U,
+    .EERAMBase = 0x14000000U,
+    .CallBack = NULL_CALLBACK
 };
 
 

@@ -1,5 +1,9 @@
+/*
+ * @brief  Implementation of the NVM abstraction layer for S32K144.
+ */
 #include "nvm.h"
 #include <string.h>
+#include "flash_driver.h"
 
 /* The Flash driver configuration structure. It's initialized by the S32K Config Tool. */
 extern flash_ssd_config_t flashSSDConfig;

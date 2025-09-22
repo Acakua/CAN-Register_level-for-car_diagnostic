@@ -1,5 +1,9 @@
-#ifndef DTC_H_
-#define DTC_H_
+/*
+ * @brief  Header file for the Diagnostic Trouble Code (DTC) management module.
+ * This module handles setting, retrieving, and finding DTCs in NVM.
+ */
+#ifndef INC_DTC_H_
+#define INC_DTC_H_
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -47,6 +51,11 @@ typedef struct __attribute__((packed))
 
 
 /**
+ * @brief Initializes the DTC module.
+ */
+void DTC_Init(void);
+
+/**
  * @brief Sets a new DTC or updates an existing one in NVM.
  * @param dtc_code The DTC to set.
  * @param status The new status mask for the DTC.
@@ -76,4 +85,4 @@ uint8_t DTC_GetCount(void);
  */
 int8_t DTC_Find(uint32_t dtc_code);
 
-#endif /* DTC_H_ */
+#endif /* INC_DTC_H_ */

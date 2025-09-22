@@ -22,47 +22,51 @@ functionalGroups:
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "peripherals_adc_config_1.h"
+#include "peripherals_lpspi_1.h"
 
 /*******************************************************************************
- * adc_config_1 initialization code
+ * lpspi_1 initialization code
  ******************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'adc_config_1'
-- type: 'adc_config'
-- mode: 'general'
+- name: 'lpspi_1'
+- type: 'lpspi_config'
+- mode: 'general_soft'
 - custom_name_enabled: 'false'
-- type_id: 'adc'
+- type_id: 'lpspi'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'ADC_0'
+- peripheral: 'LPSPI_0'
 - config_sets:
-  - adc:
-    - adcConverterCfg:
+  - lpspi:
+    - lpspiMasterConfig:
       - 0:
-        - name: 'adc_config_1_ConvConfig0'
-        - readonly: 'true'
-        - clockDivide: 'ADC_CLK_DIVIDE_4'
-        - sampleTime: '255'
-        - resolution: 'ADC_RESOLUTION_12BIT'
-        - inputClock: 'ADC_CLK_ALT_1'
-        - trigger: 'ADC_TRIGGER_SOFTWARE'
-        - pretriggerSel: 'ADC_PRETRIGGER_SEL_PDB'
-        - triggerSel: 'ADC_TRIGGER_SEL_PDB'
-        - dmaEnable: 'false'
-        - voltageRef: 'ADC_VOLTAGEREF_VREF'
-        - continuousConvEnable: 'false'
-        - supplyMonitoringEnable: 'false'
-    - adcCompareCfg: []
-    - adcAverageCfg: []
-    - adcChanCfg: []
-    - quick_selection: 'dv_adc'
+        - name: 'lpspi_0_MasterConfig0'
+        - readOnly: 'true'
+        - bitsPerSec: '500000'
+        - whichPcs: 'LPSPI_PCS0'
+        - pcsPolarity: 'LPSPI_ACTIVE_LOW'
+        - isPcsContinuous: 'true'
+        - bitcount: '8'
+        - lpspiSrcClk: '8000000'
+        - clkPhase: 'LPSPI_CLOCK_PHASE_1ST_EDGE'
+        - clkPolarity: 'LPSPI_SCK_ACTIVE_HIGH'
+        - lsbFirst: 'false'
+        - transferType: 'LPSPI_USING_INTERRUPTS'
+        - rxDMAChannel: '0'
+        - txDMAChannel: '0'
+        - callback: 'NULL'
+        - callbackParam: 'NULL'
+    - lpspiSlaveConfig: []
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
 /**
  * @page misra_violations MISRA-C:2012 violations
+ *
+ * @section [global] 
+ * Violates MISRA 2012 Required Rule 8.4, A compatible declaration shall be 
+ * visible when an object or function with external linkage is defined..
  *
  * @section [global]
  * Violates MISRA 2012 Advisory Rule 8.7, External variable could be made static.
@@ -70,18 +74,27 @@ instance:
  *
  */
 
-const adc_converter_config_t adc_config_1_ConvConfig0 = {
-  .clockDivide = ADC_CLK_DIVIDE_4,
-  .sampleTime = 255U,
-  .resolution = ADC_RESOLUTION_12BIT,
-  .inputClock = ADC_CLK_ALT_1,
-  .trigger = ADC_TRIGGER_SOFTWARE,
-  .pretriggerSel = ADC_PRETRIGGER_SEL_PDB,
-  .triggerSel = ADC_TRIGGER_SEL_PDB,
-  .dmaEnable = false,
-  .voltageRef = ADC_VOLTAGEREF_VREF,
-  .continuousConvEnable = false,
-  .supplyMonitoringEnable = false
+/* Define state structure for current SPI instance */
+lpspi_state_t lpspi_1State;
+
+/* LPSPI Master Configurations 0 */
+
+const lpspi_master_config_t lpspi_0_MasterConfig0 = {
+  .bitsPerSec = 500000UL,
+  .whichPcs = LPSPI_PCS0,
+  .pcsPolarity = LPSPI_ACTIVE_LOW,
+  .isPcsContinuous = true,
+  .bitcount = 8U,
+  .lpspiSrcClk = 8000000UL,
+  .clkPhase = LPSPI_CLOCK_PHASE_1ST_EDGE,
+  .clkPolarity = LPSPI_SCK_ACTIVE_HIGH,
+  .lsbFirst = false,
+  .transferType = LPSPI_USING_INTERRUPTS,
+  .rxDMAChannel = 0U,
+  .txDMAChannel = 0U,
+  .callback = NULL,
+  .callbackParam = NULL
 };
+
 
 

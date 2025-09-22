@@ -22,42 +22,53 @@ functionalGroups:
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "peripherals_adc_config_1.h"
+#include "peripherals_can_pal_2.h"
 
 /*******************************************************************************
- * adc_config_1 initialization code
+ * can_pal_2 initialization code
  ******************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'adc_config_1'
-- type: 'adc_config'
+- name: 'can_pal_2'
+- type: 'can_pal_config'
 - mode: 'general'
 - custom_name_enabled: 'false'
-- type_id: 'adc'
+- type_id: 'can_pal'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'ADC_0'
+- peripheral: 'CAN0'
 - config_sets:
-  - adc:
-    - adcConverterCfg:
-      - 0:
-        - name: 'adc_config_1_ConvConfig0'
-        - readonly: 'true'
-        - clockDivide: 'ADC_CLK_DIVIDE_4'
-        - sampleTime: '255'
-        - resolution: 'ADC_RESOLUTION_12BIT'
-        - inputClock: 'ADC_CLK_ALT_1'
-        - trigger: 'ADC_TRIGGER_SOFTWARE'
-        - pretriggerSel: 'ADC_PRETRIGGER_SEL_PDB'
-        - triggerSel: 'ADC_TRIGGER_SEL_PDB'
-        - dmaEnable: 'false'
-        - voltageRef: 'ADC_VOLTAGEREF_VREF'
-        - continuousConvEnable: 'false'
-        - supplyMonitoringEnable: 'false'
-    - adcCompareCfg: []
-    - adcAverageCfg: []
-    - adcChanCfg: []
-    - quick_selection: 'dv_adc'
+  - can_pal:
+    - can_instance_t2:
+      - name: 'can_instance0'
+      - readonly: 'false'
+      - instType: 'CAN_INST_TYPE_FLEXCAN'
+    - can_user_config_t2:
+      - name: 'can_config0'
+      - readonly: 'false'
+      - maxBuffNum: '16'
+      - mode: 'CAN_NORMAL_MODE'
+      - peClkSrc: 'CAN_CLK_SOURCE_OSC'
+      - enableFD: 'false'
+      - payloadSize: 'CAN_PAYLOAD_SIZE_8'
+      - can_bitrate2ts: 'false'
+      - flexcan_cfg_time_segments1:
+        - nominalBitrate:
+          - propSeg: '7'
+          - phaseSeg1: '4'
+          - phaseSeg2: '1'
+          - preDivider: '0'
+          - rJumpwidth: '1'
+        - dataBitrate: []
+    - can_fifo_ext2:
+      - isRxFIFO_Enable: 'false'
+      - name: 'can_fifo_ext0'
+      - struct_extension:
+        - readonly: 'false'
+        - numIdFilters: 'FLEXCAN_RX_FIFO_ID_FILTERS_8'
+        - idFormat: 'FLEXCAN_RX_FIFO_ID_FORMAT_A'
+        - idFilterTable: 'NULL'
+    - quick_selection: 'dv_can_pal0'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
@@ -70,18 +81,32 @@ instance:
  *
  */
 
-const adc_converter_config_t adc_config_1_ConvConfig0 = {
-  .clockDivide = ADC_CLK_DIVIDE_4,
-  .sampleTime = 255U,
-  .resolution = ADC_RESOLUTION_12BIT,
-  .inputClock = ADC_CLK_ALT_1,
-  .trigger = ADC_TRIGGER_SOFTWARE,
-  .pretriggerSel = ADC_PRETRIGGER_SEL_PDB,
-  .triggerSel = ADC_TRIGGER_SEL_PDB,
-  .dmaEnable = false,
-  .voltageRef = ADC_VOLTAGEREF_VREF,
-  .continuousConvEnable = false,
-  .supplyMonitoringEnable = false
+can_instance_t can_instance0 = {
+  .instType = CAN_INST_TYPE_FLEXCAN,
+  .instIdx = 0UL
+};
+
+can_user_config_t can_config0 = {
+  .maxBuffNum = 16UL,
+  .mode = CAN_NORMAL_MODE,
+  .peClkSrc = CAN_CLK_SOURCE_OSC,
+  .enableFD = false,
+  .payloadSize = CAN_PAYLOAD_SIZE_8,
+  .nominalBitrate = {
+    .propSeg = 7UL,
+    .phaseSeg1 = 4UL,
+    .phaseSeg2 = 1UL,
+    .preDivider = 0UL,
+    .rJumpwidth = 1UL
+  },
+  .dataBitrate = {
+    .propSeg = 7UL,
+    .phaseSeg1 = 4UL,
+    .phaseSeg2 = 1UL,
+    .preDivider = 0UL,
+    .rJumpwidth = 1UL
+  },
+  .extension = NULL
 };
 
 

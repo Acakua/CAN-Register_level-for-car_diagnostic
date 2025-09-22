@@ -1,19 +1,20 @@
 #ifndef UDS_H_
 #define UDS_H_
 
+
 #include <stdint.h>
 #include <stdbool.h>
 #include "FlexCan.h"
 #include "dtc.h"
 
-/* ===== UDS Service IDs ===== */
+// ===== UDS Service IDs =====
 #define UDS_SERVICE_ECU_RESET                0x11
 #define UDS_SERVICE_READ_DID                 0x22
 #define UDS_SERVICE_WRITE_DID                0x2E
-#define UDS_SERVICE_CLEAR_DTC                0x14   
-#define UDS_SERVICE_READ_DTC_INFORMATION     0x19   
+#define UDS_SERVICE_CLEAR_DTC                0x14
+#define UDS_SERVICE_READ_DTC_INFORMATION     0x19
 
-/* === NRC (Negative Response Codes) ===== */
+// ===== NRC (Negative Response Codes) =====
 #define NRC_SERVICE_NOT_SUPPORTED        0x11
 #define NRC_SUBFUNC_NOT_SUPPORTED        0x12
 #define NRC_INCORRECT_LENGTH             0x13
@@ -23,18 +24,13 @@
 #define NRC_GENERAL_PROGRAMMING_FAILURE  0x72
 #define NRC_RESPONSE_TOO_LONG            0x14
 
-/* ===== DIDs ===== */
-#define DID_ENGINE_TEMP      0xF190
-#define DID_ENGINE_LIGHT     0xF191
-#define DID_THRESHOLD        0xF192
-
-/* ===== Security Levels ===== */
-#define SECURITY_LEVEL_NONE     0
-#define SECURITY_LEVEL_ENGINE   1
-
-/* ===== Global Variables ===== */
-extern uint8_t  currentSecurityLevel;
-extern uint16_t engineTemp;
+// ===== DIDs =====
+#define DID_ENGINE_TEMP             0xF190
+#define DID_ENGINE_LIGHT            0xF191
+#define DID_VEHICLE_ID              0x2015
+#define DID_TEMP_THRESHOLD_LOW      0xF192
+#define DID_TEMP_THRESHOLD_MEDIUM   0xF193
+#define DID_TEMP_THRESHOLD_HIGH     0xF194
 
 /* --- Service 0x19 Sub-functions --- */
 #define SF_REPORT_NUMBER_OF_DTC_BY_STATUS_MASK          (0x01)
@@ -49,29 +45,28 @@ extern uint16_t engineTemp;
 #define ISO_TP_PCI_TYPE_FIRST_FRAME       (0x10)
 #define ISO_TP_PCI_TYPE_CONSECUTIVE_FRAME (0x20)
 
-/* ===== Public API ===== */
+
+// ===== Security Levels =====
+#define SECURITY_LEVEL_NONE     0
+#define SECURITY_LEVEL_ENGINE   1
+
+
+// ===== Global Variables =====
+extern uint8_t currentSecurityLevel;
+extern uint16_t engineTemp;
+
+// ===== Function Prototypes =====
 void UDS_DispatchService(const CAN_Message_t msg_rx);
-void UDS_SendResponse(void);
 
-/* Handlers */
-void handleReadDTCInformation(const CAN_Message_t *requestMsg);           
-void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg);   
-
+// Service handlers (optional to expose)
 void handleECUReset(const CAN_Message_t msg_rx);
 void handleReadDataByIdentifier(const CAN_Message_t msg_rx);
 void handleWriteDataByIdentifier(const CAN_Message_t msg_rx);
+void handleReadDTCInformation(const CAN_Message_t *requestMsg);
+void handleClearDiagnosticInformation(const CAN_Message_t *requestMsg);
+void UDS_SendResponse(void);
 
-/* External dependencies */
-bool isResetConditionOk(void);
-bool isSecurityAccessGranted(uint16_t did);
-bool isConditionOk(uint16_t did);
-bool writeToNVM(uint16_t did, uint16_t value);
-
-bool isGroupOfDTCSupported(uint32_t groupOfDTC);
-bool isConditionOkForClear(void);
-bool clearDTCFromNVM(uint32_t groupOfDTC);
-
-uint16_t ReadADCValue(void);
+// External dependencies (must be implemented elsewhere)
 void ECU_Reset(void);
 
-#endif /* UDS_H_ */
+#endif

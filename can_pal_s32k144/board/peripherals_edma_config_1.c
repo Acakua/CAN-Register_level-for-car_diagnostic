@@ -22,42 +22,45 @@ functionalGroups:
 /*******************************************************************************
  * Included files 
  ******************************************************************************/
-#include "peripherals_adc_config_1.h"
+#include "peripherals_edma_config_1.h"
 
 /*******************************************************************************
- * adc_config_1 initialization code
+ * edma_config_1 initialization code
  ******************************************************************************/
 /* clang-format off */
 /* TEXT BELOW IS USED AS SETTING FOR TOOLS *************************************
 instance:
-- name: 'adc_config_1'
-- type: 'adc_config'
+- name: 'edma_config_1'
+- type: 'edma_config'
 - mode: 'general'
 - custom_name_enabled: 'false'
-- type_id: 'adc'
+- type_id: 'edma'
 - functional_group: 'BOARD_InitPeripherals'
-- peripheral: 'ADC_0'
+- peripheral: 'EDMA'
 - config_sets:
-  - adc:
-    - adcConverterCfg:
-      - 0:
-        - name: 'adc_config_1_ConvConfig0'
-        - readonly: 'true'
-        - clockDivide: 'ADC_CLK_DIVIDE_4'
-        - sampleTime: '255'
-        - resolution: 'ADC_RESOLUTION_12BIT'
-        - inputClock: 'ADC_CLK_ALT_1'
-        - trigger: 'ADC_TRIGGER_SOFTWARE'
-        - pretriggerSel: 'ADC_PRETRIGGER_SEL_PDB'
-        - triggerSel: 'ADC_TRIGGER_SEL_PDB'
-        - dmaEnable: 'false'
-        - voltageRef: 'ADC_VOLTAGEREF_VREF'
-        - continuousConvEnable: 'false'
-        - supplyMonitoringEnable: 'false'
-    - adcCompareCfg: []
-    - adcAverageCfg: []
-    - adcChanCfg: []
-    - quick_selection: 'dv_adc'
+  - edma_driver:
+    - settings_edmaUserCfg:
+      - userStateStruct: 'dmaController_State'
+      - array_userCfgStructs:
+        - 0:
+          - userCfgName: 'dmaController_InitConfig0'
+          - cfgType: 'edma_user_config_t'
+          - readOnly: 'true'
+          - chnArbitration: 'EDMA_ARBITRATION_FIXED_PRIORITY'
+          - haltOnError: 'false'
+    - settings_array_edmaChCfg:
+      - array_chCfgStructs:
+        - 0:
+          - chStateStructName: 'dmaControllerChn0_State'
+          - chConfigName: 'dmaControllerChn0_Config'
+          - chType: 'edma_channel_config_t'
+          - virtCh: '0'
+          - chPrio: 'EDMA_CHN_DEFAULT_PRIORITY'
+          - chReq: 'EDMA_REQ_DISABLED'
+          - chCallback: 'NULL'
+          - chCallbackParam: 'NULL'
+          - enableTrigger: 'false'
+    - quick_selection: 'edma_default'
  * BE CAREFUL MODIFYING THIS COMMENT - IT IS YAML SETTINGS FOR TOOLS **********/
 /* clang-format on */
 
@@ -69,19 +72,30 @@ instance:
  * The external variables will be used in other source files in application code.
  *
  */
+edma_state_t dmaController_State;
 
-const adc_converter_config_t adc_config_1_ConvConfig0 = {
-  .clockDivide = ADC_CLK_DIVIDE_4,
-  .sampleTime = 255U,
-  .resolution = ADC_RESOLUTION_12BIT,
-  .inputClock = ADC_CLK_ALT_1,
-  .trigger = ADC_TRIGGER_SOFTWARE,
-  .pretriggerSel = ADC_PRETRIGGER_SEL_PDB,
-  .triggerSel = ADC_TRIGGER_SEL_PDB,
-  .dmaEnable = false,
-  .voltageRef = ADC_VOLTAGEREF_VREF,
-  .continuousConvEnable = false,
-  .supplyMonitoringEnable = false
+edma_chn_state_t dmaControllerChn0_State;
+
+edma_chn_state_t * const edmaChnStateArray[] = {
+    &dmaControllerChn0_State,
+};
+
+edma_channel_config_t dmaControllerChn0_Config = {
+    .channelPriority = EDMA_CHN_DEFAULT_PRIORITY,
+    .virtChnConfig = EDMA_CHN0_NUMBER,
+    .source = EDMA_REQ_DISABLED,
+    .callback = NULL,
+    .callbackParam = NULL,
+    .enableTrigger = false,
+};
+
+const edma_channel_config_t * const edmaChnConfigArray[] = {
+    &dmaControllerChn0_Config,
+};
+
+const edma_user_config_t dmaController_InitConfig0 = {
+    .chnArbitration = EDMA_ARBITRATION_FIXED_PRIORITY,
+    .haltOnError = false
 };
 
 
